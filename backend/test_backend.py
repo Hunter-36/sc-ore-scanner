@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.config import get_settings, ScanRegion
+from src.config import get_settings
 from src.resolver import RSResolver
 from src.capture import ScreenCapture
 from src.ocr import OCREngine

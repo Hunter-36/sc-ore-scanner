@@ -1,0 +1,21 @@
+# SC Ore Scanner - Core runtime dependencies (no ML)
+# These are everything the app needs EXCEPT the OCR/ML stack.
+# Kept separate so CI unit tests and tooling can install a light, fast subset.
+
+# FastAPI framework
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+websockets>=12.0
+
+# Screen capture & image processing
+mss>=9.0.1
+opencv-python>=4.9.0
+numpy>=1.26.0
+Pillow>=10.3.0
+
+# Configuration & validation
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+
+# Logging
+python-json-logger>=2.0.7

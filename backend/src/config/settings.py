@@ -27,8 +27,13 @@ class OCRConfig(BaseModel):
     clahe_grid_size: Tuple[int, int] = Field(default=(8, 8), description="CLAHE tile grid size")
 
     # Image preprocessing
-    upscale_factor: int = Field(default=3, ge=1, le=5, description="Image upscale multiplier")
-    min_component_area: int = Field(default=50, ge=0, description="Remove components smaller than this")
+    upscale_factor: int = Field(default=4, ge=1, le=5, description="Image upscale multiplier")
+    min_component_area: int = Field(default=40, ge=0, description="Remove components smaller than this (px area)")
+    min_component_height_frac: float = Field(
+        default=0.6, ge=0.0, le=1.0,
+        description="Keep only components at least this fraction of the tallest blob's height "
+                    "(drops the thousands comma and small particles)"
+    )
 
 
 class ScanGatingConfig(BaseModel):

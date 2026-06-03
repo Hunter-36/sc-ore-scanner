@@ -1,0 +1,35 @@
+[project]
+name = "sc-ore-scanner-backend"
+version = "1.0.0"
+description = "Real-time Star Citizen mining overlay backend"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# asyncio_mode=auto lets async test functions run without an explicit decorator.
+asyncio_mode = "auto"
+markers = [
+    "e2e: end-to-end OCR pipeline tests (require the ML stack + image/video fixtures)",
+]
+# Quieter, more useful default output.
+addopts = "-ra -q"
+
+[tool.ruff]
+# The existing code wasn't written against a linter, so keep the rule set tight:
+# catch real bugs (syntax errors, undefined names, unused imports) without
+# nitpicking style. Widen `select` later if you want stricter checks.
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E9",   # syntax errors
+    "F63",  # invalid comparisons / assert tuple
+    "F7",   # syntax (break/return outside loop/function, etc.)
+    "F82",  # undefined name
+    "F401", # unused import
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests legitimately import for fixture side effects and use bare asserts.
+"tests/**" = ["F401"]

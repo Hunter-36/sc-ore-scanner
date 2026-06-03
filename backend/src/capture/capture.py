@@ -1,7 +1,7 @@
 """Screen capture with scan-state gating."""
 
 import logging
-from typing import Optional, Tuple
+from typing import Optional
 import numpy as np
 from PIL import Image
 import mss

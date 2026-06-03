@@ -1,0 +1,11 @@
+# SC Ore Scanner - OCR / ML dependencies
+# Heavy stack (torch is ~hundreds of MB). Required to actually run the scanner
+# and the OCR end-to-end tests, but NOT for unit tests of the pure logic.
+#
+# For CPU-only installs (e.g. CI), install torch from the CPU wheel index:
+#   pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-ml.txt
+#   uv pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-ml.txt
+
+easyocr>=1.7.0
+torch>=2.0.0
+torchvision>=0.15.0

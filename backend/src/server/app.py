@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from ..config import Settings, ScanRegion, get_settings
 from ..capture import ScreenCapture
 from ..ocr import OCREngine
-from ..resolver import RSResolver, OreMatch
+from ..resolver import RSResolver
 
 logger = logging.getLogger(__name__)
 

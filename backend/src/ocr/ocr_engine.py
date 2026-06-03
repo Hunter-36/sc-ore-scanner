@@ -67,22 +67,30 @@ class OCREngine:
             raise
 
     def preprocess_image(self, img: Image.Image) -> np.ndarray:
-        """Preprocess image for OCR with CLAHE.
+        """Preprocess a scan-region image for OCR.
+
+        The Star Citizen RS readout is bright teal digits (with a thousands
+        comma and a location-pin glyph) on a dark, particle-flecked background.
+        The goal is to maximize digit contrast while stripping the comma, the
+        pin, and floating particles -- WITHOUT destroying the thin digit strokes.
 
         Pipeline:
         1. Convert to RGB
-        2. Upscale for better OCR
+        2. Upscale (LANCZOS) for better small-text OCR
         3. Convert to grayscale
-        4. Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
-        5. Adaptive thresholding
-        6. Morphological noise removal
-        7. Remove small components
+        4. CLAHE + min-max normalize to boost digit contrast
+        5. Build a "digit-like" mask from connected components, keeping only
+           tall, sufficiently-large blobs (drops the short comma + tiny specks)
+        6. Apply the mask to the contrast-enhanced grayscale (strokes intact)
+
+        The pin glyph survives as a single component but reads as a lone digit,
+        which the 3-6 digit regex in detect_numbers() discards.
 
         Args:
-            img: Input PIL Image
+            img: Input PIL Image (the captured scan region)
 
         Returns:
-            Preprocessed image as numpy array (RGB)
+            Preprocessed image as a numpy array (RGB, suitable for EasyOCR)
         """
         config = self.settings.ocr
 
@@ -90,87 +98,72 @@ class OCREngine:
         if img.mode != 'RGB':
             img = img.convert('RGB')
 
-        # Upscale for better OCR
-        if config.upscale_factor > 1:
-            new_size = (
-                img.width * config.upscale_factor,
-                img.height * config.upscale_factor
-            )
-            img = img.resize(new_size, Image.Resampling.LANCZOS)
-
         img_array = np.array(img)
 
-        # Convert to grayscale
+        # Upscale for better OCR. cv2's LANCZOS4 preserves the digit edges more
+        # faithfully than PIL's resampler here -- enough to keep borderline
+        # glyphs (e.g. 6 vs 8) from flipping.
+        if config.upscale_factor > 1:
+            f = config.upscale_factor
+            img_array = cv2.resize(
+                img_array,
+                (img_array.shape[1] * f, img_array.shape[0] * f),
+                interpolation=cv2.INTER_LANCZOS4,
+            )
+
+        # Grayscale
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
 
-        # Apply CLAHE for better contrast
+        # Boost contrast: CLAHE then stretch the histogram to the full range.
         clahe = cv2.createCLAHE(
             clipLimit=config.clahe_clip_limit,
             tileGridSize=config.clahe_grid_size
         )
         gray = clahe.apply(gray)
+        gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
 
-        # Adaptive thresholding (bright text on dark background)
-        thresh = cv2.adaptiveThreshold(
-            gray, 255,
-            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY,
-            11, 2
-        )
+        # Strip non-digit noise (comma, pin remnants, particles) while keeping
+        # the grayscale digit shapes intact.
+        gray = self._mask_digit_components(gray)
 
-        # Morphological opening to remove noise
-        kernel = np.ones((2, 2), np.uint8)
-        thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+        # EasyOCR expects an RGB-shaped array.
+        return cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
 
-        # Convert back to RGB for EasyOCR
-        img_array = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
+    def _mask_digit_components(self, gray: np.ndarray) -> np.ndarray:
+        """Zero out everything that doesn't look like a digit stroke.
 
-        # Remove small components (commas, periods, noise)
-        img_array = self._remove_small_components(img_array)
-
-        return img_array
-
-    def _remove_small_components(self, img_array: np.ndarray) -> np.ndarray:
-        """Remove small connected components (punctuation, noise).
+        Otsu-thresholds the (already contrast-boosted) grayscale to find bright
+        blobs, then keeps only those that are tall enough relative to the
+        tallest blob (digits) and large enough in area. The short thousands
+        comma and small floating particles fall below the height/area cutoffs
+        and are removed. The mask is applied back to the grayscale image so the
+        surviving digits retain their anti-aliased shape.
 
         Args:
-            img_array: Input image (RGB)
+            gray: Contrast-enhanced grayscale image
 
         Returns:
-            Cleaned image
+            Grayscale image with non-digit components zeroed out
         """
         config = self.settings.ocr
 
-        # Convert to grayscale
-        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-        # Binary threshold
-        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
-        # Find connected components
         num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
+        if num_labels <= 1:
+            return gray  # nothing bright found
 
-        # Create mask of components to keep
+        max_height = max(stats[i, cv2.CC_STAT_HEIGHT] for i in range(1, num_labels))
+        height_cutoff = config.min_component_height_frac * max_height
+
         mask = np.zeros(binary.shape, dtype=np.uint8)
-
-        for i in range(1, num_labels):  # Skip background
+        for i in range(1, num_labels):  # skip background
+            height = stats[i, cv2.CC_STAT_HEIGHT]
             area = stats[i, cv2.CC_STAT_AREA]
-            if area >= config.min_component_area:
+            if height >= height_cutoff and area >= config.min_component_area:
                 mask[labels == i] = 255
 
-        # Estimate background color
-        bg_mask = binary == 0
-        if np.any(bg_mask):
-            bg_color = np.median(img_array[bg_mask], axis=0).astype(np.uint8)
-        else:
-            bg_color = np.array([128, 128, 128], dtype=np.uint8)
-
-        # Apply mask
-        result = img_array.copy()
-        removed_pixels = (binary == 255) & (mask == 0)
-        result[removed_pixels] = bg_color
-
-        return result
+        return cv2.bitwise_and(gray, gray, mask=mask)
 
     def detect_numbers(self, img: Image.Image) -> List[OCRResult]:
         """Detect RS signature numbers in image.
