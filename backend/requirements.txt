@@ -1,0 +1,23 @@
+# SC Ore Scanner - Backend Dependencies
+# FastAPI framework
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+websockets>=12.0
+
+# Screen capture & image processing
+mss>=9.0.1
+opencv-python>=4.9.0
+numpy>=1.26.0
+Pillow>=10.3.0
+
+# OCR
+easyocr>=1.7.0
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Configuration & validation
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+
+# Logging
+python-json-logger>=2.0.7

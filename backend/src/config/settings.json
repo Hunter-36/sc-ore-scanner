@@ -1,0 +1,35 @@
+{
+  "scan_interval": 2.0,
+  "scan_region": null,
+  "ocr": {
+    "confidence_threshold": 0.5,
+    "min_consecutive_frames": 3,
+    "allowlist": "0123456789",
+    "gpu_enabled": false,
+    "clahe_clip_limit": 2.0,
+    "clahe_grid_size": [8, 8],
+    "upscale_factor": 3,
+    "min_component_area": 50
+  },
+  "scan_gating": {
+    "enabled": true,
+    "sample_points": [[10, 10], [20, 20], [30, 30]],
+    "color_threshold_r": 180,
+    "color_threshold_g": 180,
+    "color_threshold_b": 200,
+    "min_active_points": 1
+  },
+  "signature": {
+    "max_error_margin": 50,
+    "error_margin_percent": 0.01,
+    "min_quantity": 1,
+    "max_quantity": 10,
+    "valid_rs_min": 100,
+    "valid_rs_max": 200000
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8765,
+    "log_level": "INFO"
+  }
+}

@@ -1,0 +1,274 @@
+{
+  "ores": [
+    {
+      "id": "quantanium",
+      "name": "Quantainium",
+      "base_rs": 3170,
+      "tier": "S",
+      "tier_value": 4,
+      "volatile": true,
+      "context": ["ship", "vehicle"],
+      "notes": "Degrades after extraction. Highest value ore."
+    },
+    {
+      "id": "bexalite",
+      "name": "Bexalite",
+      "base_rs": 3600,
+      "tier": "S",
+      "tier_value": 4,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": "High value stable ore."
+    },
+    {
+      "id": "stileron",
+      "name": "Stileron",
+      "base_rs": 3185,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "savrilium",
+      "name": "Savrilium",
+      "base_rs": 3200,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "ouratite",
+      "name": "Ouratite",
+      "base_rs": 3370,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "beryl",
+      "name": "Beryl",
+      "base_rs": 3540,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "taranite",
+      "name": "Taranite",
+      "base_rs": 3555,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "gold",
+      "name": "Gold",
+      "base_rs": 3585,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "laranite",
+      "name": "Laranite",
+      "base_rs": 3825,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "riccite",
+      "name": "Riccite",
+      "base_rs": 3385,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "lindinium",
+      "name": "Lindinium",
+      "base_rs": 3400,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "borase",
+      "name": "Borase",
+      "base_rs": 3570,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "agricium",
+      "name": "Agricium",
+      "base_rs": 3885,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "titanium",
+      "name": "Titanium",
+      "base_rs": 3855,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "tungsten",
+      "name": "Tungsten",
+      "base_rs": 3870,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "torite",
+      "name": "Torite",
+      "base_rs": 3900,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "hephestanite",
+      "name": "Hephestanite",
+      "base_rs": 4180,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "corundum",
+      "name": "Corundum",
+      "base_rs": 4225,
+      "tier": "C",
+      "tier_value": 1,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "copper",
+      "name": "Copper",
+      "base_rs": 4240,
+      "tier": "C",
+      "tier_value": 1,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "iron",
+      "name": "Iron",
+      "base_rs": 4270,
+      "tier": "C",
+      "tier_value": 1,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "aluminium",
+      "name": "Aluminium",
+      "base_rs": 4285,
+      "tier": "C",
+      "tier_value": 1,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "ice",
+      "name": "Ice",
+      "base_rs": 4300,
+      "tier": "C",
+      "tier_value": 1,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": ""
+    },
+    {
+      "id": "hadanite",
+      "name": "Hadanite",
+      "base_rs": 5415,
+      "tier": "S",
+      "tier_value": 4,
+      "volatile": false,
+      "context": ["fps"],
+      "notes": "Hand-minable gem. FPS scanner only."
+    },
+    {
+      "id": "dolivine",
+      "name": "Dolivine",
+      "base_rs": 5250,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["fps"],
+      "notes": "Hand-minable gem. FPS scanner only."
+    },
+    {
+      "id": "aphorite",
+      "name": "Aphorite",
+      "base_rs": 5235,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["fps"],
+      "notes": "Hand-minable gem. FPS scanner only."
+    },
+    {
+      "id": "felinite",
+      "name": "Felinite",
+      "base_rs": 5430,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["fps"],
+      "notes": "Hand-minable gem. FPS scanner only."
+    },
+    {
+      "id": "salvage_panel",
+      "name": "Salvage Panel",
+      "base_rs": 2000,
+      "tier": "Salvage",
+      "tier_value": 0,
+      "volatile": false,
+      "context": ["salvage"],
+      "notes": "Salvageable ship panel."
+    }
+  ]
+}
