@@ -40,7 +40,8 @@ Real-time Star Citizen mining overlay that automatically detects RS (Radar Signa
 ### Installation
 
 ```bash
-# Clone or download the project
+# Clone the project
+git clone https://github.com/Hunter-36/sc-ore-scanner.git
 cd sc-ore-scanner
 
 # Install backend dependencies
