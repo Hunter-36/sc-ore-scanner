@@ -70,3 +70,25 @@ def test_set_scan_region_then_config_reflects_it(client, tmp_path, monkeypatch):
 
     # Stop the scanning loop the POST kicked off so it doesn't leak across tests.
     client.post("/scan/stop")
+
+
+# --- CSRF guard on mutating endpoints (uses the safe /scan/stop, never /shutdown) ---
+
+def test_mutating_request_blocked_from_foreign_origin(client):
+    resp = client.post("/scan/stop", headers={"origin": "https://evil.example"})
+    assert resp.status_code == 403
+
+
+def test_mutating_request_allowed_from_tauri_origin(client):
+    resp = client.post("/scan/stop", headers={"origin": "http://tauri.localhost"})
+    assert resp.status_code == 200
+
+
+def test_mutating_request_allowed_without_origin(client):
+    resp = client.post("/scan/stop")
+    assert resp.status_code == 200
+
+
+def test_mutating_request_allowed_from_localhost_dev(client):
+    resp = client.post("/scan/stop", headers={"origin": "http://localhost:1420"})
+    assert resp.status_code == 200

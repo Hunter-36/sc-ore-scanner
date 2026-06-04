@@ -5,10 +5,27 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Dict, Set
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+# Hosts allowed to make mutating requests (CSRF guard). The Tauri production
+# webview's origin is http://tauri.localhost; dev runs on localhost.
+_TRUSTED_ORIGIN_HOSTS = {"localhost", "127.0.0.1", "tauri.localhost"}
+
+
+def _origin_is_trusted(origin: str) -> bool:
+    """True if an HTTP Origin header belongs to the app (not a foreign website)."""
+    try:
+        parsed = urlparse(origin)
+    except ValueError:
+        return False
+    if parsed.scheme == "tauri":  # tauri://localhost (non-Windows)
+        return True
+    return (parsed.hostname or "") in _TRUSTED_ORIGIN_HOSTS
 
 from ..config import Settings, ScanRegion, get_settings
 from ..capture import ScreenCapture
@@ -197,14 +214,30 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    # CORS middleware
+    # CORS: read endpoints are open, but NO credentials (the previous
+    # allow_origins="*" + allow_credentials=True combo is invalid and is rejected
+    # by browsers). The CSRF guard below is what actually protects mutating calls.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Tauri localhost
-        allow_credentials=True,
-        allow_methods=["*"],
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
+
+    # CSRF guard: the API binds to localhost, but a web page the user visits could
+    # still fire a simple cross-origin POST at it (e.g. /shutdown, /config/scan-region).
+    # Block mutating requests that carry a foreign web Origin; allow the Tauri webview
+    # (`http://tauri.localhost` / `tauri://localhost`), localhost dev, and non-browser
+    # callers (no Origin header).
+    @app.middleware("http")
+    async def csrf_guard(request, call_next):
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            origin = request.headers.get("origin")
+            if origin and not _origin_is_trusted(origin):
+                logger.warning(f"Blocked cross-origin {request.method} from origin {origin!r}")
+                return JSONResponse(status_code=403, content={"detail": "Cross-origin request blocked"})
+        return await call_next(request)
 
     # WebSocket endpoint
     @app.websocket("/ws")
