@@ -338,7 +338,8 @@ Streams real-time ore detections:
 - [ ] Multiple monitor support
 - [ ] Customizable overlay position
 - [ ] Sound notifications
-- [ ] Price integration
+- [ ] Price integration — show each detected ore's current market value in aUEC
+      via a trade-data API (e.g. UEX Corp / Regolith)
 
 ## Contributing
 
@@ -355,7 +356,7 @@ required. o7
 
 ☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/huntersutton36)** — one-off tips, no account needed.
 
-_(Once Sponsorships are enabled in the repo settings, a **Sponsor** button also appears at the top of the page.)_
+You can also use the **Sponsor** button at the top of the repo.
 
 Not in a position to donate? Starring the repo, filing good bug reports, and
 sharing it with fellow miners helps just as much. o7
