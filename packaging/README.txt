@@ -31,14 +31,15 @@ yourself - setup.bat handles it.
 ------------------------------------------------------------
 1. Launch Star Citizen and get in your mining ship / scanner.
 2. Double-click  launch.bat
-   - A backend window opens, then the overlay appears top-right.
-   - Status goes OFFLINE -> READY -> SCANNING.
+   - The overlay appears top-right. The backend runs in the
+     background (no window) and logs to  logs\scanner.log.
+   - First launch shows "Starting scanner..." for ~15-20s while the
+     OCR engine loads, then switches to READY / SCANNING.
 3. Look at a radar signature in-game. Within ~2 seconds the overlay
    shows the ore name and quantity (e.g. "Beryl  3x"), color-coded by tier.
 
-To stop: click the X in the overlay's top corner, then close the
-backend window. (You can also drag the overlay by its title bar to
-reposition it.)
+To stop: click the X in the overlay's top corner - this also stops the
+background backend. (You can drag the overlay by its title bar to move it.)
 
 ------------------------------------------------------------
   "Windows protected your PC"  (SmartScreen)
@@ -57,9 +58,9 @@ build it yourself from the source if you prefer:
 ------------------------------------------------------------
   TROUBLESHOOTING
 ------------------------------------------------------------
-- Overlay stuck on OFFLINE: the backend is still loading; wait
-  ~10s. If it never connects, make sure the backend window is
-  open and didn't show an error.
+- Overlay stuck on "Starting scanner...": the OCR engine is still
+  loading (up to ~20s on first launch). If it never connects,
+  check  logs\scanner.log  for errors.
 - Nothing detected / spotty detection: re-run setup.bat and draw a
   slightly LARGER box, leaving some margin around the RS readout so
   the number is always inside it. Recalibrate too if you changed your

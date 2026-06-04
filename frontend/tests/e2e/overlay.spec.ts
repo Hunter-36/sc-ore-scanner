@@ -69,7 +69,7 @@ test('overlay shows offline message when backend is unreachable', async ({ page 
 
   await page.goto('/');
   await expect(page.locator('.status-text')).toHaveText('OFFLINE');
-  await expect(page.locator('.message')).toContainText('Connecting to backend');
+  await expect(page.locator('.message')).toContainText('Starting scanner');
 
   // Re-open for any subsequent runs/retries.
   wss = new WebSocketServer({ port: 8765, path: '/ws' });

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import Dict, Set
 
@@ -71,19 +72,6 @@ async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngi
     global scan_enabled
 
     logger.info("Scanning loop started")
-
-    # Warm up the OCR engine up front so the first real scan is responsive, and
-    # make it obvious in the console that we're loading (the very first start can
-    # take ~15-20s while the ONNX models load) rather than looking stuck.
-    try:
-        logger.info("Loading OCR engine — first start can take ~15-20s, please wait...")
-        ocr.initialize()
-        from PIL import Image
-        ocr.detect_numbers(Image.new("RGB", (200, 80)))  # warm the model
-        ocr.reset_debouncing()
-        logger.info("OCR engine ready — scanning for radar signatures.")
-    except Exception as e:
-        logger.error(f"OCR warmup failed (will retry lazily): {e}")
 
     while scan_enabled:
         try:
@@ -160,6 +148,20 @@ async def lifespan(app: FastAPI):
     # Start scanning if region configured
     global scan_enabled, scanning_task
     if settings.scan_region:
+        # Warm up the OCR engine before we start serving, so the first real scan
+        # is responsive. Blocking here keeps the overlay in its "starting up"
+        # (OFFLINE) state during the ~15-20s first load, instead of connecting
+        # and then sitting idle — clearer for the user.
+        try:
+            from PIL import Image
+            logger.info("Loading OCR engine - first start can take ~15-20s...")
+            app.state.ocr.initialize()
+            app.state.ocr.detect_numbers(Image.new("RGB", (200, 80)))  # warm the model
+            app.state.ocr.reset_debouncing()
+            logger.info("OCR engine ready.")
+        except Exception as e:
+            logger.error(f"OCR warmup failed (will retry lazily): {e}")
+
         scan_enabled = True
         scanning_task = asyncio.create_task(
             scanning_loop(settings, app.state.capture, app.state.ocr, app.state.resolver)
@@ -191,7 +193,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="SC Ore Scanner",
         description="Real-time Star Citizen mining overlay backend",
-        version="1.0.0",
+        version="1.1.0",
         lifespan=lifespan
     )
 
@@ -227,6 +229,21 @@ def create_app() -> FastAPI:
     async def health_check():
         """Health check endpoint."""
         return {"status": "ok", "scanning": scan_enabled}
+
+    @app.post("/shutdown")
+    async def shutdown():
+        """Stop the backend process (called by the overlay's close button).
+
+        The backend runs windowless, so closing the overlay must also stop it.
+        Exit shortly after responding so the HTTP reply can flush first.
+        """
+        logger.info("Shutdown requested by client — exiting.")
+
+        def _exit():
+            os._exit(0)
+
+        asyncio.get_event_loop().call_later(0.3, _exit)
+        return {"message": "shutting down"}
 
     @app.get("/config")
     async def get_config():

@@ -1,6 +1,6 @@
 [package]
 name = "sc-ore-scanner"
-version = "1.0.0"
+version = "1.1.0"
 description = "Star Citizen mining overlay"
 authors = ["you"]
 license = ""

@@ -3,6 +3,13 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { OreCard } from './OreCard';
 
 async function closeOverlay() {
+  // Stop the (windowless) backend first, so it doesn't linger after the overlay
+  // closes. Fire-and-forget; ignore errors (backend may already be down).
+  try {
+    await fetch('http://127.0.0.1:8765/shutdown', { method: 'POST' });
+  } catch {
+    /* backend not reachable — nothing to stop */
+  }
   try {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
     await getCurrentWindow().close();
@@ -52,8 +59,9 @@ export function Overlay() {
       <div className="ore-list">
         {!connected && (
           <div className="message">
-            <p>Connecting to backend...</p>
-            <p className="hint">Make sure backend is running on port 8765</p>
+            <p>Starting scanner…</p>
+            <p className="hint">First launch loads the OCR engine (~15–20s). If this
+              persists, check logs/scanner.log.</p>
           </div>
         )}
 

@@ -37,21 +37,16 @@ if errorlevel 1 (
 
 echo.
 echo ============================================================
-echo   Calibration - tell the scanner where to look
+echo   Calibration - opening the region selector...
 echo ============================================================
 echo   A full-screen window will open. Click and drag a box over
 echo   the spot on your mining HUD where the RS number appears
 echo   (the teal "10,620"-style readout), then release.
+echo   Leave a little margin around the number. (ESC to skip.)
 echo.
-echo   Tip: take a screenshot of the scanner in-game first so you
-echo   know exactly where it shows. You can re-run setup.bat to
-echo   recalibrate anytime (e.g. if you change resolution).
-echo.
-pause
 ".venv\Scripts\python.exe" calibrate.py
 
 echo.
-echo ============================================================
-echo   Setup complete!  Start the app anytime with  launch.bat
-echo ============================================================
-pause
+echo Setup complete - start the app anytime with launch.bat
+echo (This window closes automatically.)
+timeout /t 4 /nobreak >nul
