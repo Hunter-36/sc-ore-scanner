@@ -340,6 +340,22 @@ Streams real-time ore detections:
 - [ ] Sound notifications
 - [ ] Price integration
 
+## Support
+
+SC Ore Scanner is free and built/maintained on personal time. If it saves you
+some aUEC and you'd like to help keep it updated as Star Citizen changes (HUD
+tweaks, new ores, features), any support is hugely appreciated — but never
+required. o7
+
+- ☕ **Ko-fi** (one-off tip): <!-- add your link --> _coming soon_
+- 💜 **GitHub Sponsors**: use the **Sponsor** button at the top of the repo <!-- enable in .github/FUNDING.yml -->
+
+> Maintainer: fill in your donation links in [`.github/FUNDING.yml`](.github/FUNDING.yml)
+> (enables the Sponsor button) and replace the placeholder above.
+
+Not in a position to donate? Starring the repo, filing good bug reports, and
+sharing it with fellow miners helps just as much.
+
 ## License
 
 MIT

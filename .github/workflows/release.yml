@@ -1,8 +1,8 @@
 name: Release
 
-# Build the Windows installer and publish a GitHub Release whenever a version
+# Builds the portable Windows zip and drafts a GitHub Release when a version
 # tag is pushed, e.g.:
-#   git tag v1.0.1 && git push origin v1.0.1
+#   git tag v1.0.0 && git push origin v1.0.0
 on:
   push:
     tags:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows installer
+    name: Build portable Windows zip
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,14 +40,45 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: frontend
 
-      - name: Build app + publish release
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build overlay (no installer bundle)
+        run: pnpm tauri build --no-bundle
+        working-directory: frontend
+
+      - name: Assemble portable zip
+        shell: pwsh
+        run: |
+          $stage = "staging"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          # Prebuilt overlay binary (launched by launch.bat, not by the user)
+          Copy-Item "frontend/src-tauri/target/release/sc-ore-scanner.exe" `
+                    -Destination (Join-Path $stage "SC Ore Scanner.exe")
+
+          # Backend source (no deps, no tests, no venv)
+          $be = Join-Path $stage "backend"
+          New-Item -ItemType Directory -Force -Path $be | Out-Null
+          Copy-Item "backend/src"  -Destination $be -Recurse
+          Copy-Item "backend/data" -Destination $be -Recurse
+          Copy-Item "backend/main.py","backend/calibrate.py" -Destination $be
+          Copy-Item "backend/requirements*.txt" -Destination $be
+
+          # Launcher scripts + readme
+          Copy-Item "packaging/setup.bat","packaging/launch.bat" -Destination $stage
+          Copy-Item "packaging/README.txt" -Destination $stage
+
+          # Drop any stray __pycache__ that might have been copied
+          Get-ChildItem -Path $be -Recurse -Directory -Filter "__pycache__" |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+          $zip = "sc-ore-scanner-$($env:GITHUB_REF_NAME)-windows.zip"
+          Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -Force
+          echo "ZIP_NAME=$zip" >> $env:GITHUB_ENV
+
+      - name: Draft GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          projectPath: frontend
-          tagName: ${{ github.ref_name }}
-          releaseName: "SC Ore Scanner ${{ github.ref_name }}"
-          releaseBody: "Automated build of the SC Ore Scanner overlay. Download the `.msi` or `.exe` installer below."
-          releaseDraft: true
-          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          name: "SC Ore Scanner ${{ github.ref_name }}"
+          body_path: packaging/RELEASE_NOTES.md
+          draft: true
+          files: ${{ env.ZIP_NAME }}
