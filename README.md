@@ -19,7 +19,12 @@ No Python, Node, or Rust to install — `setup.bat` provisions everything.
 2. Run **`setup.bat`** once — installs the backend (~150 MB download) and walks you
    through calibrating where the RS number shows on your mining HUD.
 3. Run **`launch.bat`** to play — the overlay appears top-right and shows the ore
-   (e.g. `Beryl 3x`) within ~2 s of looking at a radar signature.
+   (e.g. `Beryl 3x`) within ~2 s of looking at a radar signature. Close it with the
+   **✕** in the overlay's top corner (then close the backend window).
+
+> 💡 **Calibration tip:** if detection is spotty on first setup, re-run `setup.bat`
+> and draw a slightly **larger** box — leave some margin around the RS readout so the
+> number is always inside it. Too tight and it drifts out of frame.
 
 > ⚠️ Windows may show **"Windows protected your PC"** for this free, unsigned tool —
 > click **More info → Run anyway**. Full instructions are in the `README.txt` inside the zip.

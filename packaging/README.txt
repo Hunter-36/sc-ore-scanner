@@ -36,7 +36,9 @@ yourself - setup.bat handles it.
 3. Look at a radar signature in-game. Within ~2 seconds the overlay
    shows the ore name and quantity (e.g. "Beryl  3x"), color-coded by tier.
 
-To stop: close the backend window and the overlay.
+To stop: click the X in the overlay's top corner, then close the
+backend window. (You can also drag the overlay by its title bar to
+reposition it.)
 
 ------------------------------------------------------------
   "Windows protected your PC"  (SmartScreen)
@@ -58,9 +60,10 @@ build it yourself from the source if you prefer:
 - Overlay stuck on OFFLINE: the backend is still loading; wait
   ~10s. If it never connects, make sure the backend window is
   open and didn't show an error.
-- Nothing detected while scanning: re-run setup.bat to
-  recalibrate the scan region (especially if you changed your
-  screen resolution or HUD scale).
+- Nothing detected / spotty detection: re-run setup.bat and draw a
+  slightly LARGER box, leaving some margin around the RS readout so
+  the number is always inside it. Recalibrate too if you changed your
+  screen resolution or HUD scale.
 - Still stuck? Open an issue on GitHub (link above).
 
 ------------------------------------------------------------

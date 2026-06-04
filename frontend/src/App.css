@@ -82,6 +82,25 @@ body {
   opacity: 0.9;
 }
 
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #ff6688;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  margin-left: 8px;
+  border-radius: 3px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.close-btn:hover {
+  opacity: 1;
+  background: rgba(255, 51, 102, 0.25);
+}
+
 /* Ore List */
 .ore-list {
   flex: 1;

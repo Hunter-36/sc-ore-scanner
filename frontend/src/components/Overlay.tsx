@@ -2,6 +2,16 @@ import { useOreStore } from '../store/useOreStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { OreCard } from './OreCard';
 
+async function closeOverlay() {
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    await getCurrentWindow().close();
+  } catch (err) {
+    // Not running inside Tauri (e.g. browser/dev) — nothing to close.
+    console.warn('close() unavailable outside Tauri:', err);
+  }
+}
+
 export function Overlay() {
   const { ores, scannerActive, connected } = useOreStore();
   useWebSocket();
@@ -28,6 +38,14 @@ export function Overlay() {
             {connected ? (scannerActive ? 'SCANNING' : 'READY') : 'OFFLINE'}
           </span>
         </div>
+        <button
+          className="close-btn"
+          onClick={closeOverlay}
+          title="Close overlay"
+          aria-label="Close overlay"
+        >
+          ✕
+        </button>
       </div>
 
       {/* Ore List */}

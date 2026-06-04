@@ -1,0 +1,10 @@
+{
+  "identifier": "default",
+  "description": "Permissions for the overlay window: close and drag-to-move.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
+  ]
+}
