@@ -21,7 +21,7 @@ async function closeOverlay() {
 }
 
 export function Overlay() {
-  const { ores, scannerActive, connected } = useOreStore();
+  const { ores, scannerActive, connected, session } = useOreStore();
   useWebSocket();
 
   const oreList = Object.entries(ores);
@@ -81,6 +81,13 @@ export function Overlay() {
           </div>
         )}
       </div>
+
+      {/* Session footer */}
+      {connected && session.total_detections > 0 && (
+        <div className="session-footer">
+          Session: {session.total_detections} detections · {session.distinct_ores} types
+        </div>
+      )}
     </div>
   );
 }

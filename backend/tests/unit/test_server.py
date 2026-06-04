@@ -92,3 +92,23 @@ def test_mutating_request_allowed_without_origin(client):
 def test_mutating_request_allowed_from_localhost_dev(client):
     resp = client.post("/scan/stop", headers={"origin": "http://localhost:1420"})
     assert resp.status_code == 200
+
+
+# --- session stats endpoints ---
+
+def test_stats_endpoint(client):
+    import src.server.app as app_module
+    app_module.session_stats.reset()
+    resp = client.get("/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["distinct_ores"] == 0
+    assert body["total_detections"] == 0
+    assert "ores" in body
+
+
+def test_stats_export_csv(client):
+    resp = client.get("/stats/export.csv")
+    assert resp.status_code == 200
+    assert "text/csv" in resp.headers["content-type"]
+    assert resp.text.startswith("ore_id,name,tier")

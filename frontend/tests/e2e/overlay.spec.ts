@@ -30,6 +30,7 @@ const SCAN_RESULT = {
   },
   scanner_active: true,
   timestamp: 1700000000,
+  session: { distinct_ores: 2, total_detections: 5 },
 };
 
 let wss: WebSocketServer;
@@ -61,6 +62,10 @@ test('overlay shows connected status and renders detected ores', async ({ page }
   await expect(page.locator('.ore-name').first()).toHaveText('Quantainium');
   await expect(page.locator('.ore-card', { hasText: 'Quantainium' }).locator('.ore-quantity'))
     .toContainText('1x');
+
+  // Session footer reflects the broadcast session summary.
+  await expect(page.locator('.session-footer')).toContainText('5 detections');
+  await expect(page.locator('.session-footer')).toContainText('2 types');
 });
 
 test('overlay shows offline message when backend is unreachable', async ({ page }) => {
