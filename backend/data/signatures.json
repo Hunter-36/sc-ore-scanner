@@ -221,6 +221,46 @@
       "notes": ""
     },
     {
+      "id": "aslarite",
+      "name": "Aslarite",
+      "base_rs": 3840,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": "Added in SC 4.7."
+    },
+    {
+      "id": "tin",
+      "name": "Tin",
+      "base_rs": 4195,
+      "tier": "C",
+      "tier_value": 1,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": "Added in SC 4.7."
+    },
+    {
+      "id": "quartz",
+      "name": "Quartz",
+      "base_rs": 4210,
+      "tier": "C",
+      "tier_value": 1,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": "Added in SC 4.7."
+    },
+    {
+      "id": "silicon",
+      "name": "Silicon",
+      "base_rs": 4255,
+      "tier": "C",
+      "tier_value": 1,
+      "volatile": false,
+      "context": ["ship", "vehicle"],
+      "notes": "Added in SC 4.7."
+    },
+    {
       "id": "hadanite",
       "name": "Hadanite",
       "base_rs": 5415,
@@ -268,7 +308,77 @@
       "tier_value": 0,
       "volatile": false,
       "context": ["salvage"],
-      "notes": "Salvageable ship panel."
+      "notes": "Salvageable ship panel. Also the 'Debris' asteroid signature (2000)."
+    },
+    {
+      "id": "asteroid_i_type",
+      "name": "I-Type Asteroid",
+      "base_rs": 4000,
+      "tier": "Type",
+      "tier_value": 0,
+      "volatile": false,
+      "context": ["asteroid"],
+      "notes": "Asteroid type signature (SC 4.7). Also the ground-vehicle deposit base (n x 4000)."
+    },
+    {
+      "id": "asteroid_c_type",
+      "name": "C-Type Asteroid",
+      "base_rs": 4700,
+      "tier": "Type",
+      "tier_value": 0,
+      "volatile": false,
+      "context": ["asteroid"],
+      "notes": "Asteroid type signature (SC 4.7)."
+    },
+    {
+      "id": "asteroid_s_type",
+      "name": "S-Type Asteroid",
+      "base_rs": 4720,
+      "tier": "Type",
+      "tier_value": 0,
+      "volatile": false,
+      "context": ["asteroid"],
+      "notes": "Asteroid type signature (SC 4.7)."
+    },
+    {
+      "id": "asteroid_p_type",
+      "name": "P-Type Asteroid",
+      "base_rs": 4750,
+      "tier": "Type",
+      "tier_value": 0,
+      "volatile": false,
+      "context": ["asteroid"],
+      "notes": "Asteroid type signature (SC 4.7)."
+    },
+    {
+      "id": "asteroid_m_type",
+      "name": "M-Type Asteroid",
+      "base_rs": 4850,
+      "tier": "Type",
+      "tier_value": 0,
+      "volatile": false,
+      "context": ["asteroid"],
+      "notes": "Asteroid type signature (SC 4.7)."
+    },
+    {
+      "id": "asteroid_q_type",
+      "name": "Q-Type Asteroid",
+      "base_rs": 4870,
+      "tier": "Type",
+      "tier_value": 0,
+      "volatile": false,
+      "context": ["asteroid"],
+      "notes": "Asteroid type signature (SC 4.7)."
+    },
+    {
+      "id": "asteroid_e_type",
+      "name": "E-Type Asteroid",
+      "base_rs": 4900,
+      "tier": "Type",
+      "tier_value": 0,
+      "volatile": false,
+      "context": ["asteroid"],
+      "notes": "Asteroid type signature (SC 4.7)."
     }
   ]
 }

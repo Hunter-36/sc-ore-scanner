@@ -88,4 +88,8 @@ Star Citizen changes, you can buy me a coffee:
 
    https://ko-fi.com/huntersutton36
 
+New to Star Citizen? Enlisting with my referral code gets us
+both a bonus:  STAR-QY52-DDQS
+   https://robertsspaceindustries.com/enlist?referral=STAR-QY52-DDQS
+
 Never required - starring/sharing the repo helps too. Thank you! o7

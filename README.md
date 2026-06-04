@@ -4,7 +4,8 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 
 ![CI](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/ci.yml/badge.svg)
 ![E2E](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/e2e.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Star Citizen](https://img.shields.io/badge/Star%20Citizen-4.7%2B-yellow)
 ![Python](https://img.shields.io/badge/python-3.11+-green)
 ![Tauri](https://img.shields.io/badge/tauri-2.0-orange)
 
@@ -324,28 +325,23 @@ Streams real-time ore detections:
 - `GET /monitors` - Get available monitors
 - `GET /signatures` - Get ore database
 
-## Supported Ores
+## Supported signatures
 
-**27 ores total:**
+Signature data is current for **Star Citizen 4.7+**, from
+[MrKraken](https://robertsspaceindustries.com/community-hub/user/MrKraken)'s mining
+signature charts (31 ores + 7 asteroid types).
 
-**S Tier:**
-- Quantainium (3170) - Volatile
-- Bexalite (3600)
-- Hadanite (5415) - FPS only
+**S Tier:** Quantainium (3170, ⚠ volatile), Bexalite (3600), Hadanite (5415, FPS)
+**A Tier:** Stileron, Savrilium, Ouratite, Beryl, Taranite, Gold, Laranite, Aslarite, Agricium; Dolivine, Felinite (FPS)
+**B Tier:** Riccite, Lindinium, Borase, Titanium, Tungsten, Torite, Hephestanite; Aphorite (FPS)
+**C Tier:** Tin, Quartz, Corundum, Copper, Silicon, Iron, Aluminium, Ice
+**Asteroid types:** I-Type (4000), C-Type (4700), S-Type (4720), P-Type (4750), M-Type (4850), Q-Type (4870), E-Type (4900)
+**Salvage / Debris:** 2000
 
-**A Tier:**
-- Stileron, Savrilium, Ouratite, Beryl, Taranite, Gold, Laranite, Agricium
-- Dolivine, Felinite (FPS only)
-
-**B Tier:**
-- Riccite, Lindinium, Borase, Titanium, Tungsten, Torite, Hephestanite
-- Aphorite (FPS only)
-
-**C Tier:**
-- Corundum, Copper, Iron, Aluminium, Ice
-
-**Salvage:**
-- Salvage Panels (2000)
+> Some signatures are ambiguous (e.g. `4000` = 2× Salvage **or** 1× I-Type), and FPS
+> hand-mining / ground-vehicle deposits use different multipliers (n×3000 / n×4000).
+> Tracked in [#21](https://github.com/Hunter-36/sc-ore-scanner/issues/21) and
+> [#22](https://github.com/Hunter-36/sc-ore-scanner/issues/22).
 
 ## Troubleshooting
 
@@ -406,6 +402,9 @@ You can also use the **Sponsor** button at the top of the repo.
 Not in a position to donate? Starring the repo, filing good bug reports, and
 sharing it with fellow miners helps just as much. o7
 
+New to Star Citizen? Using my referral code when you enlist gives us both a bonus:
+**[STAR-QY52-DDQS](https://www.robertsspaceindustries.com/enlist?referral=STAR-QY52-DDQS)** 🚀
+
 ## License
 
 MIT
@@ -419,4 +418,6 @@ Built with:
 - [React](https://react.dev/)
 - [Zustand](https://github.com/pmndrs/zustand)
 
-Ore data from Star Citizen community resources.
+Mining signature data from [MrKraken](https://robertsspaceindustries.com/community-hub/user/MrKraken)'s
+Star Citizen 4.7 mining-signature charts ([YouTube @MrKraken](https://youtube.com/@MrKraken),
+[discord.gg/mrkraken](https://discord.gg/mrkraken)).
