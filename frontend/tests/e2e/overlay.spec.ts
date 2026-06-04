@@ -17,6 +17,8 @@ const SCAN_RESULT = {
       volatile: false,
       confidence: 1.0,
       detected_rs: 10620,
+      unit_price: 19745,
+      value: 59235,
     },
     quantanium: {
       name: 'Quantainium',
@@ -57,6 +59,8 @@ test('overlay shows connected status and renders detected ores', async ({ page }
   await expect(beryl.locator('.ore-name')).toHaveText('Beryl');
   await expect(beryl.locator('.ore-quantity')).toContainText('3x');
   await expect(beryl.locator('.ore-tier')).toHaveText('A');
+  // Estimated value (UEX) renders.
+  await expect(beryl.locator('.ore-value')).toContainText('aUEC');
 
   // Highest-tier ore (Quantainium, S) is rendered and sorts first.
   await expect(page.locator('.ore-name').first()).toHaveText('Quantainium');

@@ -32,6 +32,7 @@ from ..capture import ScreenCapture
 from ..ocr import OCREngine
 from ..resolver import RSResolver
 from ..stats import SessionStats
+from ..prices import PriceCache
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +81,17 @@ class ConnectionManager:
 # Global state
 manager = ConnectionManager()
 session_stats = SessionStats()  # per-session ore detection stats
+price_cache = None              # PriceCache, set up in lifespan
+price_task = None               # background price-refresh task
 scanning_task = None
 scan_enabled = False
+
+
+async def price_refresh_loop(cache: PriceCache):
+    """Periodically refresh the ore price cache from the feed."""
+    while True:
+        await cache.refresh()
+        await asyncio.sleep(cache.refresh_seconds)
 
 
 async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngine, resolver: RSResolver):
@@ -128,6 +138,7 @@ async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngi
             # Build result message
             ores_data = {}
             for ore_id, match in aggregated.items():
+                unit_price = price_cache.sell_price(ore_id) if price_cache else None
                 ores_data[ore_id] = {
                     "name": match.ore.name,
                     "quantity": match.quantity,
@@ -135,7 +146,9 @@ async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngi
                     "tier_value": match.ore.tier_value,
                     "volatile": match.ore.volatile,
                     "confidence": round(match.confidence, 2),
-                    "detected_rs": match.detected_rs
+                    "detected_rs": match.detected_rs,
+                    "unit_price": unit_price,
+                    "value": unit_price * match.quantity if unit_price else None,
                 }
 
             result = ScanResult(
@@ -172,6 +185,15 @@ async def lifespan(app: FastAPI):
     app.state.ocr = OCREngine(settings)
     app.state.resolver = RSResolver(settings)
 
+    # Ore price cache (UEX feed). Refresh in the background so we never block.
+    global price_cache, price_task
+    if settings.prices.enabled:
+        price_cache = PriceCache(
+            settings.prices.feed_url,
+            refresh_seconds=settings.prices.refresh_minutes * 60,
+        )
+        price_task = asyncio.create_task(price_refresh_loop(price_cache))
+
     # Start scanning if region configured
     global scan_enabled, scanning_task
     if settings.scan_region:
@@ -207,6 +229,13 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
 
+    if price_task:
+        price_task.cancel()
+        try:
+            await price_task
+        except asyncio.CancelledError:
+            pass
+
     app.state.capture.close()
     app.state.ocr.close()
 
@@ -220,7 +249,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="SC Ore Scanner",
         description="Real-time Star Citizen mining overlay backend",
-        version="1.3.0",
+        version="1.4.0",
         lifespan=lifespan
     )
 
@@ -390,6 +419,13 @@ def create_app() -> FastAPI:
         return {
             "signatures": [ore.model_dump() for ore in resolver.signatures.values()]
         }
+
+    @app.get("/prices")
+    async def get_prices():
+        """Cached ore prices (UEX Corp data). Empty if disabled or not yet loaded."""
+        if price_cache is None:
+            return {"enabled": False, "prices": {}}
+        return {"enabled": True, **price_cache.summary()}
 
     @app.get("/stats")
     async def get_stats():
