@@ -17,6 +17,15 @@ That's it — nothing to install by hand. `setup.bat` installs `uv`, which provi
 a private Python and the dependencies for you. Full instructions are in the
 `README.txt` inside the zip.
 
+### Disclaimer
+
+Unofficial, independent tool — not affiliated with CIG/RSI. It only **reads your
+screen** and shows the ore name; it does **not** read/modify game memory or files,
+inject/hook the game, or automate input. RSI's
+[ToS](https://robertsspaceindustries.com/en/tos) broadly restricts unapproved
+third-party tools and the game uses Easy Anti-Cheat — this isn't RSI-approved and
+isn't legal advice, so **use at your own risk**.
+
 ### Heads up: SmartScreen
 
 This is a free, unsigned community tool, so Windows may show **"Windows protected
