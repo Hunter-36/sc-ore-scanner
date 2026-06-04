@@ -10,7 +10,7 @@ def test_defaults(settings):
     assert settings.scan_interval == 2.0
     assert settings.scan_region is None
     assert settings.server.port == 8765
-    assert settings.ocr.confidence_threshold == 0.5
+    assert settings.ocr.confidence_threshold == 0.8
     assert settings.signatures_path.exists()
 
 

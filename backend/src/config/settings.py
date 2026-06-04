@@ -17,7 +17,7 @@ class ScanRegion(BaseModel):
 
 class OCRConfig(BaseModel):
     """OCR engine configuration."""
-    confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Minimum OCR confidence (0-1)")
+    confidence_threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="Minimum OCR confidence (0-1)")
     min_consecutive_frames: int = Field(default=3, ge=1, description="Frames required for confirmation")
 
     # CLAHE preprocessing parameters
