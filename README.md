@@ -72,7 +72,7 @@ comfortable with the current RSI
 - 🎨 **Tier Visualization**: Color-coded (S/A/B/C tiers)
 - 📡 **Auto-Reconnect**: Automatically reconnects to backend
 - ⚠️ **Volatile Warning**: Special indicator for Quantainium
-- 💰 **Estimated value**: shows each ore's worth in aUEC (UEX Corp prices)
+- 💰 **Estimated value**: shows each ore's worth in aUEC (UEX Corp prices — [live table](https://hunter-36.github.io/sc-ore-scanner/))
 - 🎯 **Minimal UI**: Clean, sci-fi themed interface
 
 ## Development (build from source)

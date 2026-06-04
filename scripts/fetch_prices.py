@@ -75,8 +75,52 @@ def main() -> int:
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(output, indent=2), encoding="utf-8")
-    print(f"Wrote {len(prices)} ore prices to {OUT}")
+    (OUT.parent / "index.html").write_text(render_index(output), encoding="utf-8")
+
+    print(f"Wrote {len(prices)} ore prices to {OUT} (+ index.html)")
     return 0
+
+
+def render_index(output: dict) -> str:
+    """Render a simple dark price table for the Pages root."""
+    prices = output.get("prices", {})
+    updated = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(output.get("updated_at") or 0))
+    rows = "\n".join(
+        f"      <tr><td>{p.get('name', oid)}</td>"
+        f"<td class='num'>{int(p.get('sell') or 0):,}</td>"
+        f"<td class='num'>{int(p.get('buy') or 0):,}</td></tr>"
+        for oid, p in sorted(prices.items(), key=lambda kv: kv[1].get("sell", 0), reverse=True)
+    )
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>SC Ore Scanner — Ore Prices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{{font-family:system-ui,Segoe UI,sans-serif;background:#0b1418;color:#cfe6ee;
+       max-width:680px;margin:2.5rem auto;padding:0 1rem;line-height:1.5}}
+  h1{{color:#4fd6e6;margin-bottom:.2rem}}
+  a{{color:#4fd6e6}} .meta{{color:#7e98a3;font-size:.9rem;margin-bottom:1.2rem}}
+  table{{width:100%;border-collapse:collapse}}
+  th,td{{padding:.45rem .6rem;border-bottom:1px solid #1c333d;text-align:left}}
+  th{{color:#9fd;font-weight:600}} .num{{text-align:right;font-variant-numeric:tabular-nums}}
+  tr:hover td{{background:#11222a}}
+  footer{{margin-top:1.5rem;color:#7e98a3;font-size:.85rem}}
+</style></head><body>
+  <h1>SC Ore Scanner — Ore Prices</h1>
+  <div class="meta">{len(prices)} ores · updated {updated} · refreshed hourly ·
+    raw <a href="prices.json">prices.json</a></div>
+  <table>
+    <thead><tr><th>Ore</th><th class="num">Sell (aUEC/SCU)</th><th class="num">Buy (aUEC/SCU)</th></tr></thead>
+    <tbody>
+{rows}
+    </tbody>
+  </table>
+  <footer>
+    Price data from <a href="https://uexcorp.space">UEX Corp</a> (community-maintained).
+    Part of <a href="https://github.com/Hunter-36/sc-ore-scanner">SC Ore Scanner</a>.
+  </footer>
+</body></html>
+"""
 
 
 if __name__ == "__main__":
