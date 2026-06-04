@@ -347,14 +347,12 @@ some aUEC and you'd like to help keep it updated as Star Citizen changes (HUD
 tweaks, new ores, features), any support is hugely appreciated — but never
 required. o7
 
-- ☕ **Ko-fi** (one-off tip): <!-- add your link --> _coming soon_
-- 💜 **GitHub Sponsors**: use the **Sponsor** button at the top of the repo <!-- enable in .github/FUNDING.yml -->
+- ☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/huntersutton36)** — one-off tips, no account needed.
 
-> Maintainer: fill in your donation links in [`.github/FUNDING.yml`](.github/FUNDING.yml)
-> (enables the Sponsor button) and replace the placeholder above.
+You can also hit the **Sponsor** button at the top of the repo.
 
 Not in a position to donate? Starring the repo, filing good bug reports, and
-sharing it with fellow miners helps just as much.
+sharing it with fellow miners helps just as much. o7
 
 ## License
 

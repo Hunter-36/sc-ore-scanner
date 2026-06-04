@@ -68,5 +68,8 @@ build it yourself from the source if you prefer:
 ------------------------------------------------------------
 This is built and maintained for free, on personal time. If it
 saves you some aUEC and you'd like to help keep it updated as
-Star Citizen changes, consider chipping in - details and links
-are in the GitHub README's "Support" section. Thank you! o7
+Star Citizen changes, you can buy me a coffee:
+
+   https://ko-fi.com/huntersutton36
+
+Never required - starring/sharing the repo helps too. Thank you! o7

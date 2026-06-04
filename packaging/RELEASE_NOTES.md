@@ -27,6 +27,6 @@ scripts or build from source if you prefer.
 
 ### Support
 
-If this saves you some aUEC, see the **Support** section in the
-[README](https://github.com/Hunter-36/sc-ore-scanner#support) to help keep it
-updated as Star Citizen changes. o7
+If this saves you some aUEC and you'd like to help keep it updated as Star
+Citizen changes, you can [buy me a coffee on Ko-fi](https://ko-fi.com/huntersutton36).
+Never required — starring and sharing helps too. o7
