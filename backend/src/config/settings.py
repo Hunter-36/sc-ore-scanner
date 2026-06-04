@@ -29,8 +29,13 @@ class OCRConfig(BaseModel):
 
 
 class ScanGatingConfig(BaseModel):
-    """Scanner HUD detection configuration."""
-    enabled: bool = Field(default=True, description="Enable scan-state gating")
+    """Scanner HUD detection configuration.
+
+    Off by default: the corner-pixel sampling is fragile and tends to suppress
+    capture entirely on a normally-calibrated region. OCR over the (calibrated)
+    region is cheap, so we just run it every scan interval.
+    """
+    enabled: bool = Field(default=False, description="Enable scan-state gating")
 
     # Scanner HUD color detection (detect white/cyan scanner UI)
     sample_points: list[Tuple[int, int]] = Field(

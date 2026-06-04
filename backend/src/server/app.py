@@ -88,11 +88,15 @@ async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngi
             # Get confirmed numbers (debounced)
             confirmed = ocr.get_confirmed_numbers()
 
-            # Resolve to ores
+            # Resolve to ores. Each reading maps to its single best ore — ore
+            # base signatures are clustered (~15 RS apart), so a loose match
+            # surfaces neighbours (e.g. 7080 = exact 2x Beryl but also near-2x
+            # Taranite). The top match (exact beats fuzzy) is the real one.
             all_matches = []
             for number in confirmed:
                 matches = resolver.resolve(number, ocr_confidence=1.0)
-                all_matches.extend(matches)
+                if matches:
+                    all_matches.append(matches[0])
 
             # Aggregate duplicates
             aggregated = resolver.aggregate_detections(all_matches)

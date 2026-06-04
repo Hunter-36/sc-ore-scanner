@@ -44,7 +44,10 @@ def detect_ores_in_frame(
     detections = ocr.detect_numbers(img)
     matches = []
     for det in detections:
-        matches.extend(resolver.resolve(det.number, ocr_confidence=det.confidence))
+        # Best ore per reading only (see scanning_loop in server/app.py).
+        resolved = resolver.resolve(det.number, ocr_confidence=det.confidence)
+        if resolved:
+            matches.append(resolved[0])
     return resolver.aggregate_detections(matches)
 
 

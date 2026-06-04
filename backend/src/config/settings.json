@@ -9,7 +9,7 @@
     "upscale_factor": 4
   },
   "scan_gating": {
-    "enabled": true,
+    "enabled": false,
     "sample_points": [[10, 10], [20, 20], [30, 30]],
     "color_threshold_r": 180,
     "color_threshold_g": 180,
