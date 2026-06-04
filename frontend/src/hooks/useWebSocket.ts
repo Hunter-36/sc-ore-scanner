@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useOreStore, ScanResult } from '../store/useOreStore';
+import { BACKEND_WS } from '../config';
 
-const WS_URL = 'ws://127.0.0.1:8765/ws';
 const RECONNECT_DELAY = 3000; // 3 seconds
 
 export function useWebSocket() {
@@ -16,7 +16,7 @@ export function useWebSocket() {
     }
 
     console.log('Connecting to backend WebSocket...');
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(BACKEND_WS);
     wsRef.current = ws;
 
     ws.onopen = () => {

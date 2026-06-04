@@ -25,7 +25,7 @@ class ScreenCapture:
             settings: Application settings
         """
         self.settings = settings
-        self.sct = mss.mss()
+        self.sct = mss.MSS()
         self._last_gate_status = False
 
     def capture_region(self, force: bool = False) -> Optional[Image.Image]:

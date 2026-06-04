@@ -3,14 +3,6 @@
 Real-time Star Citizen mining overlay. It reads the RS number off your mining
 scanner HUD and shows the ore + quantity, no typing required.
 
-### New in v1.1.0
-
-- **No console windows.** The backend runs in the background (no cmd window) and
-  logs to a self-pruning `logs/scanner.log`. All status shows on the overlay.
-- **`setup.bat`** installs, pops the calibration window, and closes itself.
-- **`launch.bat`** just starts the overlay — closing the overlay (✕) also stops the
-  background backend.
-
 ### Quick start
 
 1. **Download** the `...-windows.zip` from the **Assets** below.

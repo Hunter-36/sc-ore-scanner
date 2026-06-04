@@ -102,7 +102,11 @@ jobs:
         with:
           tag_name: ${{ needs.check.outputs.tag }}
           name: "SC Ore Scanner ${{ needs.check.outputs.tag }}"
+          # The install guide is prepended to GitHub's auto-generated, categorised
+          # "What's Changed" changelog (built from merged PRs since the last release;
+          # see .github/release.yml for the categories).
           body_path: packaging/RELEASE_NOTES.md
+          generate_release_notes: true
           draft: false
           make_latest: true
           files: ${{ env.ZIP_NAME }}

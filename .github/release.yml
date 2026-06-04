@@ -1,0 +1,15 @@
+# Configures GitHub's auto-generated release notes ("What's Changed").
+# PRs are grouped into these sections by their labels — so label PRs
+# (enhancement / bug / security / tech-debt / documentation).
+changelog:
+  categories:
+    - title: 🚀 Features
+      labels: [enhancement]
+    - title: 🐛 Fixes
+      labels: [bug]
+    - title: 🔒 Security
+      labels: [security]
+    - title: 🧹 Maintenance & docs
+      labels: [tech-debt, documentation, "good first issue", chore]
+    - title: Other changes
+      labels: ["*"]
