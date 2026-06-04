@@ -2,12 +2,19 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::{Manager, PhysicalPosition};
+use tauri_plugin_window_state::StateFlags;
 
 fn main() {
     tauri::Builder::default()
-        // Remembers the overlay's position/size across launches (saves on move/exit,
-        // restores on start). State lives in <app config>/.window-state.json.
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // Remember only the overlay's POSITION across launches (not size), so the
+        // window dimensions always come from the config — otherwise a stored size
+        // would override height changes shipped in updates. State lives in
+        // <app config>/.window-state.json.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::POSITION)
+                .build(),
+        )
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 // On first run (no saved window state yet) pin the overlay to the
