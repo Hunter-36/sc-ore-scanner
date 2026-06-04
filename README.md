@@ -340,6 +340,12 @@ Streams real-time ore detections:
 - [ ] Sound notifications
 - [ ] Price integration
 
+## Contributing
+
+Feedback and pull requests are openly welcome — bug reports, feature ideas, code,
+and especially HUD captures at different resolutions. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for dev setup, standards, and the PR flow.
+
 ## Support
 
 SC Ore Scanner is free and built/maintained on personal time. If it saves you
@@ -347,9 +353,9 @@ some aUEC and you'd like to help keep it updated as Star Citizen changes (HUD
 tweaks, new ores, features), any support is hugely appreciated — but never
 required. o7
 
-- ☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/huntersutton36)** — one-off tips, no account needed.
+☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/huntersutton36)** — one-off tips, no account needed.
 
-You can also hit the **Sponsor** button at the top of the repo.
+_(Once Sponsorships are enabled in the repo settings, a **Sponsor** button also appears at the top of the page.)_
 
 Not in a position to donate? Starring the repo, filing good bug reports, and
 sharing it with fellow miners helps just as much. o7
