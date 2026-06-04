@@ -96,3 +96,20 @@ jobs:
 
       - name: cargo check
         run: cargo check --manifest-path frontend/src-tauri/Cargo.toml
+
+  versions:
+    name: Version consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check version strings agree
+        run: |
+          PKG=$(node -p "require('./frontend/package.json').version")
+          TAURI=$(node -p "require('./frontend/src-tauri/tauri.conf.json').version")
+          CARGO=$(grep -E '^version *=' frontend/src-tauri/Cargo.toml | head -1 | sed -E 's/.*"(.*)".*/\1/')
+          echo "package.json=$PKG  tauri.conf.json=$TAURI  Cargo.toml=$CARGO"
+          if [ "$PKG" != "$TAURI" ] || [ "$PKG" != "$CARGO" ]; then
+            echo "::error::Version mismatch — bump package.json, tauri.conf.json and Cargo.toml to the same value."
+            exit 1
+          fi
+          echo "Versions agree: $PKG"
