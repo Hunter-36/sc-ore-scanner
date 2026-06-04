@@ -8,6 +8,24 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 ![Python](https://img.shields.io/badge/python-3.11+-green)
 ![Tauri](https://img.shields.io/badge/tauri-2.0-orange)
 
+## ▶️ Download & Play (Windows 10/11)
+
+### **[⬇️ Download the latest release](https://github.com/Hunter-36/sc-ore-scanner/releases/latest)**
+
+No Python, Node, or Rust to install — `setup.bat` provisions everything.
+
+1. Download `sc-ore-scanner-<version>-windows.zip` from the release above and
+   **unzip it** to a location of your choice (Desktop, a games folder, anywhere).
+2. Run **`setup.bat`** once — installs the backend (~150 MB download) and walks you
+   through calibrating where the RS number shows on your mining HUD.
+3. Run **`launch.bat`** to play — the overlay appears top-right and shows the ore
+   (e.g. `Beryl 3x`) within ~2 s of scanning an asteroid.
+
+> ⚠️ Windows may show **"Windows protected your PC"** for this free, unsigned tool —
+> click **More info → Run anyway**. Full instructions are in the `README.txt` inside the zip.
+
+> 🛠️ Want to build it yourself or contribute? See [Development](#development-build-from-source).
+
 ## Features
 
 ### Backend (Python + FastAPI)
@@ -26,7 +44,10 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 - ⚠️ **Volatile Warning**: Special indicator for Quantainium
 - 🎯 **Minimal UI**: Clean, sci-fi themed interface
 
-## Quick Start
+## Development (build from source)
+
+> **Players don't need this** — use the **Download & Play** section at the top of
+> this README. The rest of this guide is for building from source or contributing.
 
 ### Prerequisites
 
