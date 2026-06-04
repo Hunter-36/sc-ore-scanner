@@ -132,6 +132,16 @@ async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngi
             # Aggregate duplicates
             aggregated = resolver.aggregate_detections(all_matches)
 
+            # Observability: log what the OCR read and what it resolved to.
+            if detections:
+                logger.info(
+                    "OCR raw=%s confirmed=%s -> %s",
+                    [(d.number, round(d.confidence, 2)) for d in detections],
+                    confirmed,
+                    {oid: f"{m.quantity}x {m.ore.name} ({round(m.confidence, 2)})"
+                     for oid, m in aggregated.items()},
+                )
+
             # Update session statistics
             session_stats.record(aggregated)
 
@@ -249,7 +259,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="SC Ore Scanner",
         description="Real-time Star Citizen mining overlay backend",
-        version="1.4.0",
+        version="1.4.1",
         lifespan=lifespan
     )
 
