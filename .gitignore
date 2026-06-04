@@ -39,6 +39,9 @@ frontend/.playwright/
 frontend/src-tauri/target/
 frontend/dist/
 
+# Generated price feed (built by the prices workflow, deployed to Pages)
+public/
+
 # IDE
 .idea/
 .vscode/
