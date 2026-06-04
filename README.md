@@ -33,6 +33,28 @@ build from source.)
 
 > 🛠️ Want to build it yourself or contribute? See [Development](#development-build-from-source).
 
+## Disclaimer
+
+SC Ore Scanner is an independent, unofficial tool — **not** affiliated with or
+endorsed by Cloud Imperium Games (CIG) / Roberts Space Industries (RSI).
+
+It works **only by reading your screen** (the same pixels you already see) and
+displaying the matching ore name — much like a person reading the HUD, or a
+streaming overlay. It does **not**:
+
+- read or modify the game's memory,
+- read, write, or alter any game files,
+- inject code into or hook the game process,
+- automate any input or gameplay.
+
+That said, RSI's [Terms of Service](https://robertsspaceindustries.com/en/tos)
+broadly restrict third-party tools "not expressly approved by RSI," and the game
+runs Easy Anti-Cheat. This tool is **not** approved by RSI, and nothing here is
+legal advice or a guarantee. **Use it at your own risk**, and make sure you're
+comfortable with the current RSI
+[Terms of Service](https://robertsspaceindustries.com/en/tos) and
+[Rules of Conduct](https://support.robertsspaceindustries.com/hc/en-us/articles/4409491235351-Rules-of-Conduct).
+
 ## Features
 
 ### Backend (Python + FastAPI)

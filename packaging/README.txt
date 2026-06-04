@@ -7,6 +7,18 @@ A real-time overlay for Star Citizen mining. It reads the RS
 which ore it is and how many nodes - no typing, no alt-tabbing.
 
 ------------------------------------------------------------
+  DISCLAIMER
+------------------------------------------------------------
+Unofficial, independent tool - not affiliated with CIG/RSI.
+It ONLY reads your screen and shows the ore name; it does NOT
+read or modify game memory or files, inject or hook the game,
+or automate input. RSI's Terms of Service broadly restrict
+unapproved third-party tools and the game uses Easy Anti-Cheat,
+so this is not RSI-approved and is not legal advice - use at
+your own risk.
+  ToS:   https://robertsspaceindustries.com/en/tos
+
+------------------------------------------------------------
   REQUIREMENTS
 ------------------------------------------------------------
 - Windows 10 or 11
