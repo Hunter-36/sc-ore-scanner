@@ -29,6 +29,12 @@ def test_signatures_loaded(resolver):
         (17140, "Aluminium", 4),    # 4 x 4285
         (3540, "Beryl", 1),         # exact single node
         (6340, "Quantainium", 2),   # 2 x 3170
+        (3840, "Aslarite", 1),      # 4.7 ore (clustered near Laranite 3825)
+        (4195, "Tin", 1),           # 4.7 ore (clustered near Hephestanite 4180)
+        (4210, "Quartz", 1),        # 4.7 ore (clustered near Corundum 4225)
+        (4255, "Silicon", 1),       # 4.7 ore (clustered near Copper 4240)
+        (4700, "C-Type Asteroid", 1),  # asteroid type signature
+        (4900, "E-Type Asteroid", 1),  # asteroid type signature
     ],
 )
 def test_exact_division_match(resolver, detected_rs, expected_ore, expected_qty):
