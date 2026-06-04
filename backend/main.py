@@ -53,16 +53,34 @@ def main():
     # Create app
     app = create_app()
 
-    # Run server. log_config=None makes uvicorn use the root logger (our rotating
-    # file handler) instead of installing its own console logging.
-    uvicorn.run(
+    # Use an explicit Server so /shutdown can request a graceful stop (it sets
+    # server.should_exit). log_config=None routes uvicorn through the root logger
+    # (our rotating file handler) instead of its own console logging.
+    config = uvicorn.Config(
         app,
         host=settings.server.host,
         port=settings.server.port,
         log_level=settings.server.log_level.lower(),
-        access_log=False,  # Reduce noise
-        log_config=None
+        access_log=False,
+        log_config=None,
     )
+    server = uvicorn.Server(config)
+    app.state.server = server
+
+    # Surface startup failures clearly — the backend runs windowless, so without
+    # this a bind error (e.g. port already in use) would vanish and the overlay
+    # would sit on "Starting scanner…" forever. The log lands in logs/scanner.log.
+    try:
+        server.run()
+    except OSError as e:
+        logger.error(
+            f"Could not start the backend on {settings.server.host}:{settings.server.port} "
+            f"— is it already running, or is the port in use? ({e})"
+        )
+        raise
+    except Exception:
+        logger.exception("Backend stopped unexpectedly")
+        raise
 
 
 if __name__ == "__main__":
