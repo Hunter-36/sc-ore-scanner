@@ -21,6 +21,8 @@ def client(monkeypatch, tmp_path):
         # Redirect persistence to a temp file so tests never touch the real
         # src/config/settings.json.
         s.config_file = tmp_path / "settings.json"
+        # Disable the price feed so the lifespan doesn't fetch over the network.
+        s.prices.enabled = False
         return s
 
     monkeypatch.setattr(app_module, "get_settings", _settings)
@@ -112,3 +114,29 @@ def test_stats_export_csv(client):
     assert resp.status_code == 200
     assert "text/csv" in resp.headers["content-type"]
     assert resp.text.startswith("ore_id,name,tier")
+
+
+def test_prices_endpoint_disabled(client):
+    # The fixture disables the price feed -> endpoint reports disabled.
+    import src.server.app as app_module
+    app_module.price_cache = None
+    resp = client.get("/prices")
+    assert resp.status_code == 200
+    assert resp.json()["enabled"] is False
+
+
+def test_prices_endpoint_with_cache(client):
+    import src.server.app as app_module
+    from src.prices import PriceCache
+    cache = PriceCache("http://example/prices.json")
+    cache._apply({"updated_at": 1, "prices": {"beryl": {"name": "Beryl", "sell": 100, "buy": 0}}})
+    app_module.price_cache = cache
+    try:
+        resp = client.get("/prices")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["enabled"] is True
+        assert body["count"] == 1
+        assert body["prices"]["beryl"]["sell"] == 100
+    finally:
+        app_module.price_cache = None

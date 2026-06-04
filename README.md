@@ -4,7 +4,7 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 
 ![CI](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/ci.yml/badge.svg)
 ![E2E](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/e2e.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![Star Citizen](https://img.shields.io/badge/Star%20Citizen-4.7%2B-yellow)
 ![Python](https://img.shields.io/badge/python-3.11+-green)
 ![Tauri](https://img.shields.io/badge/tauri-2.0-orange)
@@ -72,6 +72,7 @@ comfortable with the current RSI
 - 🎨 **Tier Visualization**: Color-coded (S/A/B/C tiers)
 - 📡 **Auto-Reconnect**: Automatically reconnects to backend
 - ⚠️ **Volatile Warning**: Special indicator for Quantainium
+- 💰 **Estimated value**: shows each ore's worth in aUEC (UEX Corp prices)
 - 🎯 **Minimal UI**: Clean, sci-fi themed interface
 
 ## Development (build from source)
@@ -421,3 +422,5 @@ Built with:
 Mining signature data from [MrKraken](https://robertsspaceindustries.com/community-hub/user/MrKraken)'s
 Star Citizen 4.7 mining-signature charts ([YouTube @MrKraken](https://youtube.com/@MrKraken),
 [discord.gg/mrkraken](https://discord.gg/mrkraken)).
+
+Ore prices from [UEX Corp](https://uexcorp.space) (community-maintained market data).

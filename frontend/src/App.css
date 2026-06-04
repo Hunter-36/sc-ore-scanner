@@ -241,6 +241,13 @@ body {
   font-weight: 500;
 }
 
+.ore-value {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffd54a;
+}
+
 /* Utility */
 .hidden {
   display: none;

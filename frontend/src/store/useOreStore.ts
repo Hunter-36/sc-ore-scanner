@@ -8,6 +8,8 @@ export interface OreData {
   volatile: boolean;
   confidence: number;
   detected_rs: number;
+  unit_price?: number | null;  // aUEC per SCU (UEX Corp), if available
+  value?: number | null;       // unit_price * quantity
 }
 
 export interface SessionSummary {

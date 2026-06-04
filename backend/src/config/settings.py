@@ -68,6 +68,16 @@ class ServerConfig(BaseModel):
     log_level: str = Field(default="INFO", description="Logging level")
 
 
+class PriceConfig(BaseModel):
+    """Ore price feed (UEX Corp data, served via GitHub Pages)."""
+    enabled: bool = Field(default=True, description="Show estimated ore values")
+    feed_url: str = Field(
+        default="https://hunter-36.github.io/sc-ore-scanner/prices.json",
+        description="URL of the published prices.json feed"
+    )
+    refresh_minutes: int = Field(default=60, ge=1, description="How often to re-read the feed")
+
+
 class Settings(BaseSettings):
     """Main application settings."""
 
@@ -80,6 +90,7 @@ class Settings(BaseSettings):
     scan_gating: ScanGatingConfig = Field(default_factory=ScanGatingConfig)
     signature: SignatureConfig = Field(default_factory=SignatureConfig)
     server: ServerConfig = Field(default_factory=ServerConfig)
+    prices: PriceConfig = Field(default_factory=PriceConfig)
 
     # Paths
     signatures_path: Path = Field(
@@ -111,6 +122,7 @@ class Settings(BaseSettings):
             "scan_gating": self.scan_gating.model_dump(),
             "signature": self.signature.model_dump(),
             "server": self.server.model_dump(),
+            "prices": self.prices.model_dump(),
         }
 
         self.config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -147,6 +159,9 @@ class Settings(BaseSettings):
 
                 if "server" in config_data:
                     settings.server = ServerConfig(**config_data["server"])
+
+                if "prices" in config_data:
+                    settings.prices = PriceConfig(**config_data["prices"])
 
             except Exception as e:
                 print(f"Warning: Failed to load config from {config_file}: {e}")
