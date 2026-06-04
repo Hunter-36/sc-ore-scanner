@@ -72,6 +72,19 @@ async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngi
 
     logger.info("Scanning loop started")
 
+    # Warm up the OCR engine up front so the first real scan is responsive, and
+    # make it obvious in the console that we're loading (the very first start can
+    # take ~15-20s while the ONNX models load) rather than looking stuck.
+    try:
+        logger.info("Loading OCR engine — first start can take ~15-20s, please wait...")
+        ocr.initialize()
+        from PIL import Image
+        ocr.detect_numbers(Image.new("RGB", (200, 80)))  # warm the model
+        ocr.reset_debouncing()
+        logger.info("OCR engine ready — scanning for radar signatures.")
+    except Exception as e:
+        logger.error(f"OCR warmup failed (will retry lazily): {e}")
+
     while scan_enabled:
         try:
             # Capture screen region

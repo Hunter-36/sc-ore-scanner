@@ -21,9 +21,10 @@ start "" "SC Ore Scanner.exe"
 echo.
 echo Backend and overlay launched in separate windows.
 echo - The overlay sits top-right, always on top of the game.
-echo - If it says OFFLINE, give the backend ~10s to load, then it
-echo   will switch to READY / SCANNING.
-echo - To stop: close the backend window and the overlay.
+echo - FIRST START: the backend loads its OCR models, which can take
+echo   ~15-20s. The backend window shows "OCR engine ready" when it's
+echo   set; detection won't work until then. This is normal.
+echo - To stop: click the X on the overlay, then close the backend window.
 echo.
 echo You can close THIS window now.
 timeout /t 6 /nobreak >nul
