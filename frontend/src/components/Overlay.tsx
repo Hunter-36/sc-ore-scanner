@@ -1,12 +1,13 @@
 import { useOreStore } from '../store/useOreStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { OreCard } from './OreCard';
+import { BACKEND_HTTP } from '../config';
 
 async function closeOverlay() {
   // Stop the (windowless) backend first, so it doesn't linger after the overlay
   // closes. Fire-and-forget; ignore errors (backend may already be down).
   try {
-    await fetch('http://127.0.0.1:8765/shutdown', { method: 'POST' });
+    await fetch(`${BACKEND_HTTP}/shutdown`, { method: 'POST' });
   } catch {
     /* backend not reachable — nothing to stop */
   }
