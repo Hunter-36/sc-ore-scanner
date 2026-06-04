@@ -10,17 +10,26 @@ export interface OreData {
   detected_rs: number;
 }
 
+export interface SessionSummary {
+  distinct_ores: number;
+  total_detections: number;
+}
+
 export interface ScanResult {
   ores: Record<string, OreData>;
   scanner_active: boolean;
   timestamp: number;
+  session?: SessionSummary;
 }
+
+const EMPTY_SESSION: SessionSummary = { distinct_ores: 0, total_detections: 0 };
 
 interface OreStore {
   ores: Record<string, OreData>;
   scannerActive: boolean;
   connected: boolean;
   lastUpdate: number;
+  session: SessionSummary;
 
   setOres: (ores: Record<string, OreData>) => void;
   setScannerActive: (active: boolean) => void;
@@ -34,6 +43,7 @@ export const useOreStore = create<OreStore>((set) => ({
   scannerActive: false,
   connected: false,
   lastUpdate: 0,
+  session: EMPTY_SESSION,
 
   setOres: (ores) => set({ ores }),
 
@@ -44,7 +54,8 @@ export const useOreStore = create<OreStore>((set) => ({
   updateFromScan: (result) => set({
     ores: result.ores,
     scannerActive: result.scanner_active,
-    lastUpdate: result.timestamp
+    lastUpdate: result.timestamp,
+    session: result.session ?? EMPTY_SESSION
   }),
 
   clear: () => set({ ores: {}, scannerActive: false })

@@ -22,6 +22,7 @@ const sampleScan: ScanResult = {
   },
   scanner_active: true,
   timestamp: 123,
+  session: { distinct_ores: 1, total_detections: 4 },
 };
 
 describe('useOreStore', () => {
@@ -44,6 +45,8 @@ describe('useOreStore', () => {
     expect(s.ores.beryl.name).toBe('Beryl');
     expect(s.scannerActive).toBe(true);
     expect(s.lastUpdate).toBe(123);
+    expect(s.session.total_detections).toBe(4);
+    expect(s.session.distinct_ores).toBe(1);
   });
 
   it('clear wipes ores and deactivates the scanner', () => {

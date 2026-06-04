@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
 # Hosts allowed to make mutating requests (CSRF guard). The Tauri production
@@ -31,6 +31,7 @@ from ..config import Settings, ScanRegion, get_settings
 from ..capture import ScreenCapture
 from ..ocr import OCREngine
 from ..resolver import RSResolver
+from ..stats import SessionStats
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class ScanResult(BaseModel):
     ores: Dict[str, dict]  # ore_id -> {name, quantity, tier, confidence}
     scanner_active: bool
     timestamp: float
+    session: dict = {}  # compact session summary (distinct_ores, total_detections)
 
 
 class ConnectionManager:
@@ -77,6 +79,7 @@ class ConnectionManager:
 
 # Global state
 manager = ConnectionManager()
+session_stats = SessionStats()  # per-session ore detection stats
 scanning_task = None
 scan_enabled = False
 
@@ -119,6 +122,9 @@ async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngi
             # Aggregate duplicates
             aggregated = resolver.aggregate_detections(all_matches)
 
+            # Update session statistics
+            session_stats.record(aggregated)
+
             # Build result message
             ores_data = {}
             for ore_id, match in aggregated.items():
@@ -135,7 +141,11 @@ async def scanning_loop(settings: Settings, capture: ScreenCapture, ocr: OCREngi
             result = ScanResult(
                 ores=ores_data,
                 scanner_active=True,
-                timestamp=asyncio.get_event_loop().time()
+                timestamp=asyncio.get_event_loop().time(),
+                session={
+                    "distinct_ores": len(session_stats.ores),
+                    "total_detections": session_stats.total_detections,
+                },
             )
 
             # Broadcast to all clients
@@ -380,5 +390,25 @@ def create_app() -> FastAPI:
         return {
             "signatures": [ore.model_dump() for ore in resolver.signatures.values()]
         }
+
+    @app.get("/stats")
+    async def get_stats():
+        """Session statistics: per-ore counts, totals, and timing."""
+        return session_stats.summary()
+
+    @app.get("/stats/export.csv")
+    async def export_stats():
+        """Session statistics as a downloadable CSV."""
+        return PlainTextResponse(
+            session_stats.to_csv(),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=sc-ore-scanner-session.csv"},
+        )
+
+    @app.post("/stats/reset")
+    async def reset_stats():
+        """Clear the current session's statistics."""
+        session_stats.reset()
+        return {"message": "Session stats reset"}
 
     return app
