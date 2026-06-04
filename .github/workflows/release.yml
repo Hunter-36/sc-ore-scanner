@@ -1,20 +1,50 @@
 name: Release
 
-# Builds the portable Windows zip and drafts a GitHub Release when a version
-# tag is pushed, e.g.:
-#   git tag v1.0.0 && git push origin v1.0.0
+# Auto-release on merge to master: if the version in package.json doesn't yet
+# have a published release, build the Windows zip, tag it, and publish. If the
+# version is unchanged (e.g. a docs/chore merge), this is a no-op.
+#
+# Also fires on a manually pushed v* tag, or via the Actions "Run workflow" button.
 on:
   push:
-    tags:
-      - "v*"
+    branches: [master, main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  check:
+    name: Decide whether to release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.decide.outputs.tag }}
+      should_release: ${{ steps.decide.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="v$(node -p "require('./frontend/package.json').version")"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — skipping."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Will release $TAG."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build-windows:
-    name: Build portable Windows zip
+    name: Build + publish ${{ needs.check.outputs.tag }}
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,36 +79,30 @@ jobs:
         run: |
           $stage = "staging"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-
-          # Prebuilt overlay binary (launched by launch.bat, not by the user)
           Copy-Item "frontend/src-tauri/target/release/sc-ore-scanner.exe" `
                     -Destination (Join-Path $stage "SC Ore Scanner.exe")
-
-          # Backend source (no deps, no tests, no venv)
           $be = Join-Path $stage "backend"
           New-Item -ItemType Directory -Force -Path $be | Out-Null
           Copy-Item "backend/src"  -Destination $be -Recurse
           Copy-Item "backend/data" -Destination $be -Recurse
           Copy-Item "backend/main.py","backend/calibrate.py" -Destination $be
           Copy-Item "backend/requirements*.txt" -Destination $be
-
-          # Launcher scripts + readme
           Copy-Item "packaging/setup.bat","packaging/launch.bat" -Destination $stage
           Copy-Item "packaging/README.txt" -Destination $stage
-
-          # Drop any stray __pycache__ that might have been copied
           Get-ChildItem -Path $be -Recurse -Directory -Filter "__pycache__" |
             Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-
-          $zip = "sc-ore-scanner-$($env:GITHUB_REF_NAME)-windows.zip"
+          $zip = "sc-ore-scanner-$($env:RELEASE_TAG)-windows.zip"
           Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -Force
           echo "ZIP_NAME=$zip" >> $env:GITHUB_ENV
+        env:
+          RELEASE_TAG: ${{ needs.check.outputs.tag }}
 
-      - name: Draft GitHub Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: "SC Ore Scanner ${{ github.ref_name }}"
+          tag_name: ${{ needs.check.outputs.tag }}
+          name: "SC Ore Scanner ${{ needs.check.outputs.tag }}"
           body_path: packaging/RELEASE_NOTES.md
-          draft: true
+          draft: false
+          make_latest: true
           files: ${{ env.ZIP_NAME }}

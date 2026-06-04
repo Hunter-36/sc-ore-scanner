@@ -361,13 +361,8 @@ Streams real-time ore detections:
 
 ## Roadmap
 
-- [ ] Hand-minable gems detection (FPS mode)
-- [ ] Historical tracking & statistics
-- [ ] Multiple monitor support
-- [ ] Customizable overlay position
-- [ ] Sound notifications
-- [ ] Price integration — show each detected ore's current market value in aUEC
-      via a trade-data API (e.g. UEX Corp / Regolith)
+Planned features and known work are tracked as
+[GitHub issues](https://github.com/Hunter-36/sc-ore-scanner/issues).
 
 ## Contributing
 
