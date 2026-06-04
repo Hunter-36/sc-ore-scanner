@@ -11,7 +11,7 @@ scanner HUD and shows the ore + quantity, no typing required.
 3. **Run `setup.bat`** once — installs the backend (~150 MB download) and walks you
    through calibrating where the RS number shows on your mining HUD.
 4. **Run `launch.bat`** to play — the overlay appears top-right and shows detected
-   ore (e.g. `Beryl 3x`) within a couple seconds of scanning an asteroid.
+   ore (e.g. `Beryl 3x`) within a couple seconds of looking at a radar signature.
 
 That's it — no Python/Node/Rust to install, `setup.bat` provisions everything.
 Full instructions are in the `README.txt` inside the zip.

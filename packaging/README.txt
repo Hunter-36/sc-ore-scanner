@@ -33,8 +33,8 @@ yourself - setup.bat handles it.
 2. Double-click  launch.bat
    - A backend window opens, then the overlay appears top-right.
    - Status goes OFFLINE -> READY -> SCANNING.
-3. Scan an asteroid. Within ~2 seconds the overlay shows the
-   ore name and quantity (e.g. "Beryl  3x"), color-coded by tier.
+3. Look at a radar signature in-game. Within ~2 seconds the overlay
+   shows the ore name and quantity (e.g. "Beryl  3x"), color-coded by tier.
 
 To stop: close the backend window and the overlay.
 

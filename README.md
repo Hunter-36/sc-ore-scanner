@@ -19,7 +19,7 @@ No Python, Node, or Rust to install — `setup.bat` provisions everything.
 2. Run **`setup.bat`** once — installs the backend (~150 MB download) and walks you
    through calibrating where the RS number shows on your mining HUD.
 3. Run **`launch.bat`** to play — the overlay appears top-right and shows the ore
-   (e.g. `Beryl 3x`) within ~2 s of scanning an asteroid.
+   (e.g. `Beryl 3x`) within ~2 s of looking at a radar signature.
 
 > ⚠️ Windows may show **"Windows protected your PC"** for this free, unsigned tool —
 > click **More info → Run anyway**. Full instructions are in the `README.txt` inside the zip.
