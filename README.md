@@ -4,7 +4,7 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 
 ![CI](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/ci.yml/badge.svg)
 ![E2E](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/e2e.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-1.4.2-blue)
+![Version](https://img.shields.io/badge/version-1.4.3-blue)
 ![Star Citizen](https://img.shields.io/badge/Star%20Citizen-4.7%2B-yellow)
 ![Python](https://img.shields.io/badge/python-3.11+-green)
 ![Tauri](https://img.shields.io/badge/tauri-2.0-orange)
@@ -72,7 +72,7 @@ comfortable with the current RSI
 - 🎨 **Tier Visualization**: Color-coded (S/A/B/C tiers)
 - 📡 **Auto-Reconnect**: Automatically reconnects to backend
 - ⚠️ **Volatile Warning**: Special indicator for Quantainium
-- 💰 **Estimated value**: shows each ore's worth in aUEC (UEX Corp prices — [live table](https://hunter-36.github.io/sc-ore-scanner/))
+- 💰 **Market price**: shows each ore's sell price per SCU in aUEC (UEX Corp — [live table](https://hunter-36.github.io/sc-ore-scanner/))
 - 🎯 **Minimal UI**: Clean, sci-fi themed interface
 
 ## Development (build from source)

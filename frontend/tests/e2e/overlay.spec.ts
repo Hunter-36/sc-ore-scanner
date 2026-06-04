@@ -59,8 +59,8 @@ test('overlay shows connected status and renders detected ores', async ({ page }
   await expect(beryl.locator('.ore-name')).toHaveText('Beryl');
   await expect(beryl.locator('.ore-quantity')).toContainText('3x');
   await expect(beryl.locator('.ore-tier')).toHaveText('A');
-  // Estimated value (UEX) renders.
-  await expect(beryl.locator('.ore-value')).toContainText('aUEC');
+  // Per-SCU market price (UEX) renders.
+  await expect(beryl.locator('.ore-value')).toContainText('aUEC/SCU');
 
   // Highest-tier ore (Quantainium, S) is rendered and sorts first.
   await expect(page.locator('.ore-name').first()).toHaveText('Quantainium');
