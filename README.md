@@ -8,9 +8,9 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 ![Python](https://img.shields.io/badge/python-3.11+-green)
 ![Tauri](https://img.shields.io/badge/tauri-2.0-orange)
 
-## ▶️ Download & Play (Windows 10/11)
+## Download & Play
 
-### **[⬇️ Download the latest release](https://github.com/Hunter-36/sc-ore-scanner/releases/latest)**
+**[Download the latest release](https://github.com/Hunter-36/sc-ore-scanner/releases/latest)** — Windows 10/11.
 
 No Python, Node, or Rust to install — `setup.bat` provisions everything.
 
