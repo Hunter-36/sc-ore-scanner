@@ -1,9 +1,11 @@
 # SC Ore Scanner
 
-Real-time Star Citizen mining overlay that automatically detects RS (Radar Signature) numbers and displays ore names with ZERO typing required.
+Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number off the mining scanner HUD on screen, matches it to the corresponding ore type, and shows the ore name and quantity in an always-on-top overlay.
 
+![CI](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/ci.yml/badge.svg)
+![E2E](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/e2e.yml/badge.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![Python](https://img.shields.io/badge/python-3.10+-green)
+![Python](https://img.shields.io/badge/python-3.11+-green)
 ![Tauri](https://img.shields.io/badge/tauri-2.0-orange)
 
 ## Features
@@ -29,12 +31,13 @@ Real-time Star Citizen mining overlay that automatically detects RS (Radar Signa
 ### Prerequisites
 
 **Backend:**
-- Python 3.10+
+- Python 3.11+
 - Windows (for screen capture)
 - [`uv`](https://github.com/astral-sh/uv) package manager
 
 **Frontend:**
 - Node.js 18+
+- [`pnpm`](https://pnpm.io/) package manager (`corepack enable pnpm`)
 - Rust (for Tauri)
 
 ### Installation
@@ -44,15 +47,19 @@ Real-time Star Citizen mining overlay that automatically detects RS (Radar Signa
 git clone https://github.com/Hunter-36/sc-ore-scanner.git
 cd sc-ore-scanner
 
-# Install backend dependencies
+# Install backend dependencies (full stack incl. OCR/ML)
 cd backend
 uv venv
 uv pip install -r requirements.txt
 
 # Install frontend dependencies
 cd ../frontend
-npm install
+pnpm install
 ```
+
+> Dependencies are split for faster installs: `requirements-core.txt` (app, no ML),
+> `requirements-ml.txt` (easyocr/torch), and `requirements-dev.txt` (test + lint tooling).
+> `requirements.txt` pulls in core + ML.
 
 ### Usage
 
@@ -78,7 +85,7 @@ cd backend
 **Terminal 2 - Frontend:**
 ```bash
 cd frontend
-npm run tauri dev
+pnpm tauri dev
 ```
 
 ### First-Time Calibration
@@ -96,30 +103,38 @@ The configuration is saved to `backend/src/config/settings.json`
 
 ```
 sc-ore-scanner/
-├── backend/               # Python FastAPI backend
+├── backend/                  # Python FastAPI backend
 │   ├── src/
-│   │   ├── config/       # Settings management
-│   │   ├── capture/      # Screen capture + gating
-│   │   ├── ocr/          # OCR engine
-│   │   ├── resolver/     # Signature matching
-│   │   └── server/       # FastAPI + WebSocket
+│   │   ├── config/          # Settings management
+│   │   ├── capture/         # Screen capture + gating
+│   │   ├── ocr/             # OCR engine
+│   │   ├── resolver/        # Signature matching
+│   │   └── server/          # FastAPI + WebSocket
 │   ├── data/
-│   │   └── signatures.json   # 27 ore definitions
-│   ├── main.py           # Backend entry point
-│   ├── calibrate.py      # Region selector
-│   └── requirements.txt  # Python dependencies
+│   │   └── signatures.json  # 27 ore definitions
+│   ├── tests/
+│   │   ├── unit/            # resolver / config / ocr / server tests
+│   │   ├── e2e/             # OCR pipeline tests + manifest
+│   │   └── test_images/     # real scan captures (fixtures)
+│   ├── main.py              # Backend entry point
+│   ├── calibrate.py         # Region selector
+│   ├── pyproject.toml       # pytest + ruff config
+│   └── requirements*.txt    # core / ml / dev dependency sets
 │
-├── frontend/             # Tauri + React frontend
+├── frontend/                # Tauri + React frontend
 │   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── hooks/        # WebSocket hook
-│   │   ├── store/        # Zustand state
-│   │   └── App.tsx       # Root component
-│   ├── src-tauri/        # Tauri/Rust backend
-│   └── package.json      # Node dependencies
+│   │   ├── components/      # React components
+│   │   ├── hooks/           # WebSocket hook
+│   │   ├── store/           # Zustand state (+ vitest tests)
+│   │   └── App.tsx          # Root component
+│   ├── tests/e2e/           # Playwright overlay display tests
+│   ├── src-tauri/           # Tauri/Rust backend
+│   └── package.json         # Node dependencies (pnpm)
 │
-├── launch.bat            # Windows launcher script
-└── README.md             # This file
+├── .github/workflows/       # CI, E2E, and Release pipelines
+├── docs/                    # Architecture, testing, and CI docs
+├── launch.bat               # Windows launcher script
+└── README.md                # This file
 ```
 
 ## How It Works
@@ -127,13 +142,59 @@ sc-ore-scanner/
 1. **Screen Capture**: Backend captures configured screen region every 2 seconds
 2. **Scan-State Gating**: Checks if scanner HUD is active (by pixel color detection)
 3. **OCR Processing**: If scanner active, runs EasyOCR on captured image
-4. **Preprocessing**: CLAHE enhancement, adaptive thresholding, noise removal
+4. **Preprocessing**: upscale (LANCZOS) → grayscale → CLAHE contrast + histogram normalize → a height-based component mask that strips the thousands comma, the location-pin glyph, and floating particles while keeping the digit strokes intact
 5. **Number Detection**: Extracts 3-6 digit numbers from OCR results
 6. **Debouncing**: Requires 3 consecutive frames showing same number
 7. **RS Resolution**: Divides detected number by known signatures
    - Example: 10620 ÷ 3540 = 3 → **3x Beryl**
 8. **WebSocket Broadcast**: Sends results to frontend in real-time
 9. **UI Display**: Frontend shows ores sorted by tier and quantity
+
+## Testing
+
+See [`docs/testing.md`](docs/testing.md) for the full guide. Quick reference:
+
+**Backend** (from `backend/`):
+```bash
+uv pip install -r requirements-dev.txt   # core + test tooling (no ML)
+pytest tests/unit                         # fast unit tests (resolver, config, ocr, server)
+
+uv pip install -r requirements-ml.txt    # OCR/ML stack
+pytest tests/e2e                          # OCR pipeline over real captures
+```
+
+The end-to-end suite is **manifest-driven** ([`backend/tests/e2e/manifest.json`](backend/tests/e2e/manifest.json)):
+each real capture in `backend/tests/test_images/` is cropped to its scan region, run through the
+**real** OCR + resolver pipeline **10 times**, and must produce the expected ore as the
+top match in **≥90%** of runs. To add a case, drop an image (or video) in `test_images/` and add a
+manifest entry. You can also run the pipeline on any file directly:
+
+```bash
+python -m tests.e2e.pipeline tests/test_images/sc_mining_scan_rs_10620_some_particles.png
+```
+
+**Frontend** (from `frontend/`):
+```bash
+pnpm test          # vitest unit tests (store logic)
+pnpm typecheck     # tsc --noEmit
+pnpm test:e2e      # Playwright overlay display tests (mock backend WebSocket)
+```
+
+## CI/CD
+
+GitHub Actions runs three pipelines (see [`docs/ci-cd.md`](docs/ci-cd.md)):
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| **CI** (`ci.yml`) | push / PR | ruff + backend unit tests, frontend typecheck + vitest, Tauri `cargo check` |
+| **E2E** (`e2e.yml`) | push / PR | OCR pipeline over real captures (CPU torch), Playwright overlay tests |
+| **Release** (`release.yml`) | tag `v*` | builds the Windows installer and drafts a GitHub Release |
+
+Cutting a release:
+```bash
+git tag v1.0.1
+git push origin v1.0.1   # -> builds .msi/.exe and drafts a Release
+```
 
 ## Configuration
 
@@ -165,7 +226,7 @@ Edit `frontend/src-tauri/tauri.conf.json`:
 
 ```json
 {
-  "tauri": {
+  "app": {
     "windows": [{
       "width": 450,
       "height": 300,

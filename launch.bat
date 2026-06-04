@@ -29,7 +29,7 @@ timeout /t 3 /nobreak > nul
 
 REM Start frontend in new window
 echo [2/2] Starting Tauri frontend...
-start "SC Ore Scanner - Frontend" cmd /k "cd frontend && npm run tauri dev"
+start "SC Ore Scanner - Frontend" cmd /k "cd frontend && pnpm tauri dev"
 
 echo.
 echo ============================================================
