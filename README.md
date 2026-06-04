@@ -371,7 +371,7 @@ and especially HUD captures at different resolutions. See
 ## Support
 
 SC Ore Scanner is free and built/maintained on personal time. If it saves you
-some aUEC and you'd like to help keep it updated as Star Citizen changes (HUD
+some time and you'd like to help keep it updated as Star Citizen changes (HUD
 tweaks, new ores, features), any support is hugely appreciated — but never
 required. o7
 

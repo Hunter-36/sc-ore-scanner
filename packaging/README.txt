@@ -67,7 +67,7 @@ build it yourself from the source if you prefer:
   SUPPORT THE PROJECT
 ------------------------------------------------------------
 This is built and maintained for free, on personal time. If it
-saves you some aUEC and you'd like to help keep it updated as
+saves you some time and you'd like to help keep it updated as
 Star Citizen changes, you can buy me a coffee:
 
    https://ko-fi.com/huntersutton36
