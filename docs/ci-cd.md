@@ -11,6 +11,7 @@ Fast checks on every push and pull request.
 | `backend-unit` | ubuntu | apt `libgl1`/`libglib2.0-0`/`xvfb`; `uv pip install -r requirements-dev.txt`; `ruff check`; `xvfb-run pytest tests/unit` |
 | `frontend-unit` | ubuntu | pnpm install (frozen); `pnpm typecheck`; `pnpm test` (vitest) |
 | `rust-check` | ubuntu | Tauri system libs; `cargo check` on `frontend/src-tauri` (with `rust-cache`) |
+| `versions` | ubuntu | Fails if `package.json` / `tauri.conf.json` / `Cargo.toml` versions disagree |
 
 No ML stack is installed here, so it stays quick.
 
@@ -25,21 +26,34 @@ Heavier validation on push / PR (and `workflow_dispatch`).
 
 ## Release — `release.yml`
 
-Builds the installer and publishes a GitHub Release.
+Builds the portable Windows zip and publishes a GitHub Release **automatically on
+merge to `master`**.
 
-- **Trigger:** pushing a tag matching `v*` (or manual dispatch).
-- **Runner:** `windows-latest`.
-- Uses [`tauri-apps/tauri-action`](https://github.com/tauri-apps/tauri-action) to run
-  `pnpm build` + bundle, then create a **draft** Release named `SC Ore Scanner <tag>`
-  with the `.msi`/`.exe` attached.
+- **Trigger:** push to `master`/`main` (also a manual `v*` tag, or "Run workflow").
+- **`check` job (ubuntu):** computes the tag from `frontend/package.json`'s version
+  (`v<version>`). If a release for that tag already **exists**, it sets
+  `should_release=false` and the build is skipped — so docs/chore merges that don't
+  change the version are a no-op.
+- **`build-windows` job (windows, only if releasing):** `pnpm tauri build --no-bundle`,
+  assemble `sc-ore-scanner-<tag>-windows.zip` (overlay exe + backend source + scripts),
+  then [`softprops/action-gh-release`](https://github.com/softprops/action-gh-release)
+  creates the tag at the merge commit and publishes the release (latest) with the zip.
 - Needs `contents: write` (granted in the workflow); uses the default `GITHUB_TOKEN`.
 
-Cut a release:
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-Then review and publish the draft Release on GitHub.
+**To ship a release:** bump the version (see below) in your PR. When it merges, the
+matching `vX.Y.Z` release is built and published automatically.
+
+## Versioning & commits
+
+- **[Semantic Versioning](https://semver.org/):** `fix`/`docs`/`chore`/`refactor`/security
+  → **patch**; backward-compatible `feat` → **minor**; breaking change → **major**.
+- **[Conventional Commits](https://www.conventionalcommits.org/):** `type(scope): summary`
+  (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`); `!` /
+  `BREAKING CHANGE:` for breaking.
+- **Bump the version in all five places** (the CI `versions` job in `ci.yml` fails if
+  the first three disagree): `frontend/package.json`, `frontend/src-tauri/tauri.conf.json`,
+  `frontend/src-tauri/Cargo.toml`, `backend/main.py` (`Version:` log), and
+  `backend/src/server/app.py` (`FastAPI(version=...)`). The PR template lists these.
 
 ## Notes & gotchas
 
