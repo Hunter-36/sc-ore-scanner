@@ -210,7 +210,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="SC Ore Scanner",
         description="Real-time Star Citizen mining overlay backend",
-        version="1.1.0",
+        version="1.1.1",
         lifespan=lifespan
     )
 
