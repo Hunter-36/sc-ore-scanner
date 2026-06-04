@@ -45,7 +45,7 @@ def main():
     logger.info("=" * 60)
     logger.info("SC ORE SCANNER - Backend Server")
     logger.info("=" * 60)
-    logger.info(f"Version: 1.4.1")
+    logger.info(f"Version: 1.4.2")
     logger.info(f"WebSocket: ws://{settings.server.host}:{settings.server.port}/ws")
     logger.info(f"API: http://{settings.server.host}:{settings.server.port}")
     logger.info("=" * 60)
