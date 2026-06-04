@@ -65,8 +65,10 @@ pnpm test:e2e              # Playwright (pnpm exec playwright install chromium f
   no PyTorch) so the app stays ~150 MB to install. The OCR preprocessing is
   contrast-based on purpose — see [`docs/ocr-pipeline.md`](docs/ocr-pipeline.md)
   before changing it.
-- **Commits:** clear, imperative messages (a `type: summary` prefix like
-  `fix:` / `feat:` / `docs:` is nice but not required).
+- **Commits:** use [Conventional Commits](https://www.conventionalcommits.org/) —
+  `type(scope): summary`. Common types: `feat`, `fix`, `docs`, `refactor`, `test`,
+  `chore`, `ci`, `perf`. Mark breaking changes with `!` (e.g. `feat!:`) or a
+  `BREAKING CHANGE:` footer.
 
 ## Adding ore signatures
 
@@ -88,12 +90,36 @@ case:
 Captures at resolutions/HUD scales other than the ones already covered are
 especially valuable, since detection has only been validated at one resolution.
 
+## Versioning & releases
+
+This project uses [Semantic Versioning](https://semver.org/), and **merging to
+`master` automatically tags and publishes a release** when the version changes
+(it's a no-op if unchanged). So the version bump happens *in the PR*:
+
+- **patch** (`x.y.Z`) — bug fixes, security, docs, refactors (`fix`/`docs`/`chore`/`refactor`)
+- **minor** (`x.Y.0`) — new backward-compatible features (`feat`)
+- **major** (`X.0.0`) — breaking changes (e.g. a settings format change that breaks
+  existing calibration)
+
+When your change should ship, bump the version to the **same value in all five
+places** (the CI `versions` job fails if the first three disagree):
+
+1. `frontend/package.json`
+2. `frontend/src-tauri/tauri.conf.json`
+3. `frontend/src-tauri/Cargo.toml`
+4. `backend/main.py` (the `Version:` log line)
+5. `backend/src/server/app.py` (`FastAPI(version=...)`)
+
+Docs-only / chore PRs can leave the version unchanged — no release is cut.
+See [`docs/ci-cd.md`](docs/ci-cd.md) for the release pipeline details.
+
 ## Pull request flow
 
-1. Fork and branch off `master`.
+1. Branch off `master` (work from an open issue where possible).
 2. Make your change; add/adjust tests.
-3. Make sure the checks above pass.
-4. Open the PR with a short description of what and why. Screenshots/GIFs welcome
-   for overlay changes.
+3. Bump the version (above) if it should release.
+4. Make sure the checks pass.
+5. Open the PR — the template includes a version-bump checklist. Screenshots/GIFs
+   welcome for overlay changes.
 
 Thanks for contributing! 🚀

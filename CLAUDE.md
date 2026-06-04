@@ -81,4 +81,23 @@ See [`docs/testing.md`](docs/testing.md).
   React components, Pydantic models for data shapes.
 - When changing detection (OCR/resolver) behavior, validate with `pytest tests/e2e`
   and, if it changes accuracy, update/extend the e2e manifest fixtures.
-- Don't commit/push unless asked. Branch off `master` for changes when appropriate.
+
+## Workflow: issues → PR → auto-release
+
+- **Work from a GitHub issue, on a branch, via a PR into `master`** — not straight commits to master.
+- **Merging to `master` auto-tags and publishes a release** (`.github/workflows/release.yml`)
+  when the version in `frontend/package.json` has no release yet; it's a no-op if the
+  version is unchanged. So the version bump must land **in the PR**, before merge.
+- **Conventional Commits** — format `type(scope): summary`. Common types:
+  `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`. Use `!` (e.g.
+  `feat!:`) or a `BREAKING CHANGE:` footer for breaking changes.
+- **SemVer bump** (decide from the change; CI's `versions` job enforces consistency):
+  - `fix`/`docs`/`chore`/`refactor`/security → **patch** (`x.y.Z`)
+  - `feat` (backward-compatible) → **minor** (`x.Y.0`)
+  - breaking change → **major** (`X.0.0`)
+- **Bump the version in all 5 places** (CI checks the first three agree):
+  `frontend/package.json`, `frontend/src-tauri/tauri.conf.json`,
+  `frontend/src-tauri/Cargo.toml`, `backend/main.py` (`Version:` log), and
+  `backend/src/server/app.py` (`FastAPI(version=...)`).
+- Tests must pass before merge (backend `pytest`, frontend `pnpm typecheck && pnpm test`).
+  See [`docs/ci-cd.md`](docs/ci-cd.md) for the full release flow.
