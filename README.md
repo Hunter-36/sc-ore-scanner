@@ -12,7 +12,9 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 
 **[Download the latest release](https://github.com/Hunter-36/sc-ore-scanner/releases/latest)** — Windows 10/11.
 
-No Python, Node, or Rust to install — `setup.bat` provisions everything.
+Nothing to install by hand — `setup.bat` installs `uv`, which then provisions a
+private Python and all dependencies for you. (Node and Rust are only needed if you
+build from source.)
 
 1. Download `sc-ore-scanner-<version>-windows.zip` from the release above and
    **unzip it** to a location of your choice (Desktop, a games folder, anywhere).

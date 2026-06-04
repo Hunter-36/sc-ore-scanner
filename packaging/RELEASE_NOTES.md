@@ -13,8 +13,9 @@ scanner HUD and shows the ore + quantity, no typing required.
 4. **Run `launch.bat`** to play — the overlay appears top-right and shows detected
    ore (e.g. `Beryl 3x`) within a couple seconds of looking at a radar signature.
 
-That's it — no Python/Node/Rust to install, `setup.bat` provisions everything.
-Full instructions are in the `README.txt` inside the zip.
+That's it — nothing to install by hand. `setup.bat` installs `uv`, which provisions
+a private Python and the dependencies for you. Full instructions are in the
+`README.txt` inside the zip.
 
 ### Heads up: SmartScreen
 
