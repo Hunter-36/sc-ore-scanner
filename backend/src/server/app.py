@@ -232,17 +232,21 @@ def create_app() -> FastAPI:
 
     @app.post("/shutdown")
     async def shutdown():
-        """Stop the backend process (called by the overlay's close button).
+        """Stop the backend (called by the overlay's close button).
 
         The backend runs windowless, so closing the overlay must also stop it.
-        Exit shortly after responding so the HTTP reply can flush first.
+        Prefer a graceful uvicorn shutdown (runs lifespan teardown — closes the
+        capture/OCR resources); fall back to a hard exit if it doesn't stop.
         """
-        logger.info("Shutdown requested by client — exiting.")
+        logger.info("Shutdown requested by client — stopping.")
 
-        def _exit():
-            os._exit(0)
+        server = getattr(app.state, "server", None)
+        if server is not None:
+            server.should_exit = True
 
-        asyncio.get_event_loop().call_later(0.3, _exit)
+        # Backstop: if graceful shutdown hasn't taken effect shortly, force it so
+        # we never leave an invisible backend running.
+        asyncio.get_event_loop().call_later(3.0, lambda: os._exit(0))
         return {"message": "shutting down"}
 
     @app.get("/config")
