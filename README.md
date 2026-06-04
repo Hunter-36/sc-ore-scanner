@@ -13,7 +13,7 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 ### Backend (Python + FastAPI)
 - 🎯 **Screen Capture**: Fast capture with `mss` library
 - 🔍 **Scan-State Gating**: Only runs OCR when scanner HUD is active
-- 🤖 **EasyOCR**: Deep learning OCR with CLAHE preprocessing
+- 🤖 **RapidOCR (ONNX)**: lightweight OCR with CLAHE preprocessing — no PyTorch, ~150 MB install
 - 📊 **Debouncing**: Requires 3 consecutive detections before confirming
 - 🧮 **RS Resolution**: Division-based matching (e.g., 10620 = 3 × 3540 Beryl)
 - ⚡ **WebSocket**: Real-time ore streaming to frontend
@@ -58,8 +58,8 @@ pnpm install
 ```
 
 > Dependencies are split for faster installs: `requirements-core.txt` (app, no ML),
-> `requirements-ml.txt` (easyocr/torch), and `requirements-dev.txt` (test + lint tooling).
-> `requirements.txt` pulls in core + ML.
+> `requirements-ml.txt` (rapidocr-onnxruntime — the OCR engine, no PyTorch), and
+> `requirements-dev.txt` (test + lint tooling). `requirements.txt` pulls in core + OCR.
 
 ### Usage
 
@@ -141,7 +141,7 @@ sc-ore-scanner/
 
 1. **Screen Capture**: Backend captures configured screen region every 2 seconds
 2. **Scan-State Gating**: Checks if scanner HUD is active (by pixel color detection)
-3. **OCR Processing**: If scanner active, runs EasyOCR on captured image
+3. **OCR Processing**: If scanner active, runs RapidOCR on the captured image
 4. **Preprocessing**: upscale (LANCZOS) → grayscale → CLAHE contrast + histogram normalize → a height-based component mask that strips the thousands comma, the location-pin glyph, and floating particles while keeping the digit strokes intact
 5. **Number Detection**: Extracts 3-6 digit numbers from OCR results
 6. **Debouncing**: Requires 3 consecutive frames showing same number
@@ -187,7 +187,7 @@ GitHub Actions runs three pipelines (see [`docs/ci-cd.md`](docs/ci-cd.md)):
 | Workflow | Trigger | What it does |
 |---|---|---|
 | **CI** (`ci.yml`) | push / PR | ruff + backend unit tests, frontend typecheck + vitest, Tauri `cargo check` |
-| **E2E** (`e2e.yml`) | push / PR | OCR pipeline over real captures (CPU torch), Playwright overlay tests |
+| **E2E** (`e2e.yml`) | push / PR | OCR pipeline over real captures (RapidOCR), Playwright overlay tests |
 | **Release** (`release.yml`) | tag `v*` | builds the Windows installer and drafts a GitHub Release |
 
 Cutting a release:
@@ -208,7 +208,7 @@ Edit `backend/src/config/settings.json`:
   "ocr": {
     "confidence_threshold": 0.5,
     "min_consecutive_frames": 3,
-    "gpu_enabled": false
+    "upscale_factor": 4
   },
   "scan_gating": {
     "enabled": true
@@ -302,9 +302,8 @@ Streams real-time ore detections:
 ### Backend Issues
 
 **OCR not working:**
-- Run: `uv pip install easyocr`
+- Run: `uv pip install -r requirements-ml.txt`
 - Check logs for initialization errors
-- Try disabling GPU: `ocr.gpu_enabled: false`
 
 **No detections:**
 - Recalibrate scan region: `python calibrate.py`
@@ -328,7 +327,7 @@ Streams real-time ore detections:
 
 ## Performance
 
-- **Memory**: ~200MB (EasyOCR models loaded)
+- **Memory**: ~150MB (RapidOCR ONNX models loaded)
 - **CPU**: Low (2-second intervals)
 - **Latency**: <100ms from detection to display
 
@@ -349,7 +348,7 @@ MIT
 
 Built with:
 - [FastAPI](https://fastapi.tiangolo.com/)
-- [EasyOCR](https://github.com/JaidedAI/EasyOCR)
+- [RapidOCR](https://github.com/RapidAI/RapidOCR)
 - [Tauri](https://tauri.app/)
 - [React](https://react.dev/)
 - [Zustand](https://github.com/pmndrs/zustand)

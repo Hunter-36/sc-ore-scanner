@@ -22,7 +22,7 @@ Read [`docs/architecture.md`](docs/architecture.md) for the full picture.
 Backend (from `backend/`):
 ```bash
 uv pip install -r requirements-dev.txt   # unit-test tooling (no ML)
-uv pip install -r requirements.txt       # full app (adds easyocr/torch)
+uv pip install -r requirements.txt       # full app (adds RapidOCR; no PyTorch)
 pytest tests/unit                         # fast unit tests
 pytest tests/e2e                          # OCR pipeline e2e (needs ML stack)
 ruff check .
@@ -44,7 +44,7 @@ Launch both at once (Windows): `launch.bat`.
 
 ## Dependency layout
 
-`requirements-core.txt` (app, no ML) · `requirements-ml.txt` (easyocr/torch) ·
+`requirements-core.txt` (app, no OCR) · `requirements-ml.txt` (rapidocr-onnxruntime) ·
 `requirements-dev.txt` (core + pytest/ruff/httpx) · `requirements.txt` (core + ml).
 Keep the split intact — it's what makes unit-test CI fast. Pytest + ruff config
 live in `backend/pyproject.toml`.

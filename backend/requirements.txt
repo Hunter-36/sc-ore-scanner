@@ -3,7 +3,7 @@
 # `pip install -r requirements.txt` installs EVERYTHING needed to run the app,
 # exactly as before. Dependencies are organized into two files:
 #   - requirements-core.txt : FastAPI, capture, image processing, config
-#   - requirements-ml.txt   : OCR/ML stack (easyocr, torch, torchvision)
+#   - requirements-ml.txt   : OCR engine (rapidocr-onnxruntime; no PyTorch)
 #
 # See requirements-dev.txt for the test/lint tooling.
 

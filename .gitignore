@@ -63,6 +63,3 @@ temp/
 .env
 .env.local
 .env.*.local
-
-# EasyOCR models (downloaded at runtime)
-~/.EasyOCR/

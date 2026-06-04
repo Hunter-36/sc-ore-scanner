@@ -1,6 +1,6 @@
 """Unit tests for OCR preprocessing and debouncing.
 
-These avoid loading EasyOCR entirely: image preprocessing only touches
+These avoid loading the OCR engine entirely: image preprocessing only touches
 OpenCV/Pillow/NumPy, and the debouncing logic is pure Python. The actual
 text recognition is covered by the end-to-end suite.
 """

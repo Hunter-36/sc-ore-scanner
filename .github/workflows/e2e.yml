@@ -32,17 +32,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
-      - name: Cache EasyOCR models
-        uses: actions/cache@v4
-        with:
-          path: ~/.EasyOCR
-          key: easyocr-models-v1
-
-      - name: Install full dependencies (CPU torch)
-        run: |
-          uv pip install --system \
-            --extra-index-url https://download.pytorch.org/whl/cpu \
-            -r requirements.txt -r requirements-dev.txt
+      - name: Install full dependencies (incl. RapidOCR; no PyTorch)
+        run: uv pip install --system -r requirements.txt -r requirements-dev.txt
 
       - name: Run OCR end-to-end tests (10x per capture, >=90% pass)
         run: xvfb-run -a pytest tests/e2e -v

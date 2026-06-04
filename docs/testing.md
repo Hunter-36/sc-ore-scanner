@@ -5,7 +5,7 @@ unit (vitest), and frontend display end-to-end (Playwright).
 
 ## Backend
 
-Run from `backend/`. The dependency split keeps unit tests fast (no torch):
+Run from `backend/`. The dependency split keeps unit tests fast (no OCR engine):
 
 ```bash
 # Unit tests — pure logic + FastAPI, no ML stack
@@ -28,7 +28,7 @@ ruff check .
 |---|---|
 | `test_resolver.py` | RS→ore division math, OCR-error correction, aggregation, against the real `signatures.json` |
 | `test_config.py` | Settings defaults, `ScanRegion` validation, save/load roundtrip, env override |
-| `test_ocr.py` | `preprocess_image` output shape, and the debouncing state machine (no EasyOCR load) |
+| `test_ocr.py` | `preprocess_image` output shape, and the debouncing state machine (no OCR engine load) |
 | `test_server.py` | FastAPI endpoints via `TestClient` (`/health`, `/signatures`, `/config`, scan control) |
 
 > The server tests open the FastAPI lifespan, which constructs `mss`. On headless

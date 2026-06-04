@@ -6,7 +6,7 @@ Python FastAPI backend for real-time Star Citizen mining overlay.
 
 - **Screen Capture**: Low-latency capture with `mss`
 - **Scan-State Gating**: Only runs OCR when scanner HUD detected
-- **OCR**: EasyOCR with CLAHE preprocessing
+- **OCR**: RapidOCR (ONNX) with CLAHE preprocessing — no PyTorch
 - **Debouncing**: Requires N consecutive detections before confirming
 - **RS Resolution**: Division-based matching (e.g., 10620 = 3 × 3540 Beryl)
 - **WebSocket**: Real-time ore detection streaming
@@ -122,7 +122,7 @@ backend/
 ├── src/
 │   ├── config/          # Configuration management
 │   ├── capture/         # Screen capture + gating
-│   ├── ocr/             # OCR engine (CLAHE + EasyOCR)
+│   ├── ocr/             # OCR engine (CLAHE + RapidOCR)
 │   ├── resolver/        # RS signature matching
 │   └── server/          # FastAPI + WebSocket
 ├── data/
@@ -157,9 +157,8 @@ Edit `data/signatures.json`:
 
 ### OCR Not Working
 
-1. Ensure EasyOCR is installed: `uv pip install easyocr`
+1. Ensure the OCR engine is installed: `uv pip install -r requirements-ml.txt`
 2. Check logs for initialization errors
-3. Try disabling GPU: Set `ocr.gpu_enabled: false` in settings
 
 ### No Detections
 
@@ -169,7 +168,7 @@ Edit `data/signatures.json`:
 
 ### High Memory Usage
 
-- EasyOCR loads models into memory (~200MB)
+- RapidOCR loads its ONNX models into memory (~150MB)
 - This is normal and required for fast OCR
 
 ## License

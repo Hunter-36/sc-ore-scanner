@@ -1,8 +1,8 @@
 """Fixtures for the end-to-end OCR pipeline tests.
 
-These tests need the heavy ML stack (easyocr + torch) and the real capture
-fixtures. If either is missing the whole module is skipped, so the light
-unit-test CI job (which doesn't install the ML deps) stays green.
+These tests need the OCR engine (rapidocr-onnxruntime) and the real capture
+fixtures. If it's missing the whole module is skipped, so the light unit-test
+CI job (which doesn't install the OCR deps) stays green.
 """
 
 import json
@@ -22,19 +22,18 @@ for p in (str(E2E_DIR), str(BACKEND_ROOT)):
         sys.path.insert(0, p)
 
 
-def _ml_available() -> bool:
+def _ocr_available() -> bool:
     try:
-        import easyocr  # noqa: F401
-        import torch  # noqa: F401
+        import rapidocr_onnxruntime  # noqa: F401
     except Exception:
         return False
     return True
 
 
-# Skip the entire e2e package if the ML stack isn't installed.
+# Skip the entire e2e package if the OCR engine isn't installed.
 pytestmark = pytest.mark.skipif(
-    not _ml_available(),
-    reason="OCR/ML stack (easyocr + torch) not installed; run `pip install -r requirements-ml.txt`",
+    not _ocr_available(),
+    reason="OCR engine (rapidocr-onnxruntime) not installed; run `pip install -r requirements-ml.txt`",
 )
 
 
@@ -42,7 +41,7 @@ pytestmark = pytest.mark.skipif(
 def engines():
     """Initialized (OCREngine, RSResolver) shared across the whole e2e session.
 
-    EasyOCR model load is expensive, so build it once.
+    OCR engine init is relatively expensive, so build it once.
     """
     from pipeline import build_engines
 

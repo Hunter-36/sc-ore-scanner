@@ -19,8 +19,6 @@ class OCRConfig(BaseModel):
     """OCR engine configuration."""
     confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Minimum OCR confidence (0-1)")
     min_consecutive_frames: int = Field(default=3, ge=1, description="Frames required for confirmation")
-    allowlist: str = Field(default="0123456789", description="Allowed OCR characters")
-    gpu_enabled: bool = Field(default=False, description="Use GPU for OCR if available")
 
     # CLAHE preprocessing parameters
     clahe_clip_limit: float = Field(default=2.0, ge=0.0, description="CLAHE contrast limit")
@@ -28,12 +26,6 @@ class OCRConfig(BaseModel):
 
     # Image preprocessing
     upscale_factor: int = Field(default=4, ge=1, le=5, description="Image upscale multiplier")
-    min_component_area: int = Field(default=40, ge=0, description="Remove components smaller than this (px area)")
-    min_component_height_frac: float = Field(
-        default=0.6, ge=0.0, le=1.0,
-        description="Keep only components at least this fraction of the tallest blob's height "
-                    "(drops the thousands comma and small particles)"
-    )
 
 
 class ScanGatingConfig(BaseModel):

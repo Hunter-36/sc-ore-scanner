@@ -20,7 +20,7 @@ Heavier validation on push / PR (and `workflow_dispatch`).
 
 | Job | Runner | Steps |
 |---|---|---|
-| `backend-ocr-e2e` | ubuntu | full deps incl. **CPU torch** (`--extra-index-url .../whl/cpu`); EasyOCR models cached at `~/.EasyOCR`; `xvfb-run pytest tests/e2e` |
+| `backend-ocr-e2e` | ubuntu | full deps incl. **RapidOCR** (ONNX, no PyTorch); `xvfb-run pytest tests/e2e` |
 | `frontend-display-e2e` | ubuntu | pnpm install; `playwright install --with-deps chromium`; `pnpm test:e2e`; uploads `playwright-report` artifact |
 
 ## Release — `release.yml`
@@ -48,7 +48,7 @@ Then review and publish the draft Release on GitHub.
 - **pnpm version:** `packageManager` in `frontend/package.json` pins pnpm; CI uses
   `pnpm/action-setup` which respects it. Locally, avoid mixing a corepack-shimmed
   pnpm of a different major version.
-- **EasyOCR cache:** first e2e run downloads detection/recognition models (~64 MB);
-  the cache key is static so later runs reuse them.
+- **OCR models:** RapidOCR ships its ONNX models inside the wheel, so there's no
+  runtime model download to cache and no PyTorch — the e2e job is light and fast.
 - **Icons:** `frontend/src-tauri/icons/` is committed (the build requires it).
   Regenerate from a 1024² source with `pnpm tauri icon path/to/source.png`.

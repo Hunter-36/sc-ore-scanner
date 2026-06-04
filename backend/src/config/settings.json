@@ -4,12 +4,9 @@
   "ocr": {
     "confidence_threshold": 0.5,
     "min_consecutive_frames": 3,
-    "allowlist": "0123456789",
-    "gpu_enabled": false,
     "clahe_clip_limit": 2.0,
     "clahe_grid_size": [8, 8],
-    "upscale_factor": 3,
-    "min_component_area": 50
+    "upscale_factor": 4
   },
   "scan_gating": {
     "enabled": true,

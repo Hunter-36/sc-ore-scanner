@@ -25,8 +25,8 @@ class OCREngine:
     """OCR engine for detecting RS signature numbers.
 
     Features:
-    - CLAHE preprocessing for better contrast
-    - EasyOCR with digit-only detection
+    - CLAHE contrast preprocessing
+    - RapidOCR (ONNX) text detection -- lightweight, no PyTorch
     - Confidence scoring
     - Debouncing (N consecutive frames required)
     """
@@ -46,24 +46,24 @@ class OCREngine:
         self._confirmed_numbers: set[int] = set()
 
     def initialize(self):
-        """Initialize EasyOCR (lazy loading)."""
+        """Initialize RapidOCR (lazy loading).
+
+        RapidOCR ships its ONNX detection/recognition models inside the wheel,
+        so there's no runtime model download and no PyTorch dependency.
+        """
         if self._initialized:
             return
 
-        logger.info("Initializing EasyOCR...")
+        logger.info("Initializing RapidOCR...")
 
         try:
-            import easyocr
-            self.reader = easyocr.Reader(
-                ['en'],
-                gpu=self.settings.ocr.gpu_enabled,
-                verbose=False
-            )
+            from rapidocr_onnxruntime import RapidOCR
+            self.reader = RapidOCR()
             self._initialized = True
-            logger.info("EasyOCR initialized successfully")
+            logger.info("RapidOCR initialized successfully")
 
         except Exception as e:
-            logger.error(f"Failed to initialize EasyOCR: {e}")
+            logger.error(f"Failed to initialize RapidOCR: {e}")
             raise
 
     def preprocess_image(self, img: Image.Image) -> np.ndarray:
@@ -71,26 +71,26 @@ class OCREngine:
 
         The Star Citizen RS readout is bright teal digits (with a thousands
         comma and a location-pin glyph) on a dark, particle-flecked background.
-        The goal is to maximize digit contrast while stripping the comma, the
-        pin, and floating particles -- WITHOUT destroying the thin digit strokes.
+        RapidOCR handles the comma and stylized glyphs natively, so we only need
+        to boost contrast and scale the small text up -- no aggressive masking.
 
         Pipeline:
         1. Convert to RGB
-        2. Upscale (LANCZOS) for better small-text OCR
+        2. Upscale with cv2 LANCZOS4 for better small-text OCR (cv2 preserves
+           digit edges better than PIL -- keeps borderline glyphs like 6 vs 8
+           from flipping)
         3. Convert to grayscale
-        4. CLAHE + min-max normalize to boost digit contrast
-        5. Build a "digit-like" mask from connected components, keeping only
-           tall, sufficiently-large blobs (drops the short comma + tiny specks)
-        6. Apply the mask to the contrast-enhanced grayscale (strokes intact)
+        4. CLAHE to boost digit contrast against the dark background
 
-        The pin glyph survives as a single component but reads as a lone digit,
-        which the 3-6 digit regex in detect_numbers() discards.
+        The thousands comma is stripped downstream (digits-only extraction in
+        detect_numbers); the location pin reads as a separate lone digit, which
+        the length filter discards.
 
         Args:
             img: Input PIL Image (the captured scan region)
 
         Returns:
-            Preprocessed image as a numpy array (RGB, suitable for EasyOCR)
+            Preprocessed image as a numpy array (RGB, suitable for RapidOCR)
         """
         config = self.settings.ocr
 
@@ -100,9 +100,7 @@ class OCREngine:
 
         img_array = np.array(img)
 
-        # Upscale for better OCR. cv2's LANCZOS4 preserves the digit edges more
-        # faithfully than PIL's resampler here -- enough to keep borderline
-        # glyphs (e.g. 6 vs 8) from flipping.
+        # Upscale for better small-text OCR.
         if config.upscale_factor > 1:
             f = config.upscale_factor
             img_array = cv2.resize(
@@ -111,59 +109,16 @@ class OCREngine:
                 interpolation=cv2.INTER_LANCZOS4,
             )
 
-        # Grayscale
+        # Grayscale + CLAHE contrast boost.
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-
-        # Boost contrast: CLAHE then stretch the histogram to the full range.
         clahe = cv2.createCLAHE(
             clipLimit=config.clahe_clip_limit,
             tileGridSize=config.clahe_grid_size
         )
         gray = clahe.apply(gray)
-        gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
 
-        # Strip non-digit noise (comma, pin remnants, particles) while keeping
-        # the grayscale digit shapes intact.
-        gray = self._mask_digit_components(gray)
-
-        # EasyOCR expects an RGB-shaped array.
+        # RapidOCR expects an RGB-shaped array.
         return cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
-
-    def _mask_digit_components(self, gray: np.ndarray) -> np.ndarray:
-        """Zero out everything that doesn't look like a digit stroke.
-
-        Otsu-thresholds the (already contrast-boosted) grayscale to find bright
-        blobs, then keeps only those that are tall enough relative to the
-        tallest blob (digits) and large enough in area. The short thousands
-        comma and small floating particles fall below the height/area cutoffs
-        and are removed. The mask is applied back to the grayscale image so the
-        surviving digits retain their anti-aliased shape.
-
-        Args:
-            gray: Contrast-enhanced grayscale image
-
-        Returns:
-            Grayscale image with non-digit components zeroed out
-        """
-        config = self.settings.ocr
-
-        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
-        if num_labels <= 1:
-            return gray  # nothing bright found
-
-        max_height = max(stats[i, cv2.CC_STAT_HEIGHT] for i in range(1, num_labels))
-        height_cutoff = config.min_component_height_frac * max_height
-
-        mask = np.zeros(binary.shape, dtype=np.uint8)
-        for i in range(1, num_labels):  # skip background
-            height = stats[i, cv2.CC_STAT_HEIGHT]
-            area = stats[i, cv2.CC_STAT_AREA]
-            if height >= height_cutoff and area >= config.min_component_area:
-                mask[labels == i] = 255
-
-        return cv2.bitwise_and(gray, gray, mask=mask)
 
     def detect_numbers(self, img: Image.Image) -> List[OCRResult]:
         """Detect RS signature numbers in image.
@@ -181,46 +136,39 @@ class OCREngine:
         # Preprocess image
         processed = self.preprocess_image(img)
 
-        # Run OCR
+        # Run OCR. RapidOCR returns (results, elapse) where results is a list of
+        # [box_points, text, score] (or None when nothing is found).
         try:
-            results = self.reader.readtext(
-                processed,
-                allowlist=self.settings.ocr.allowlist,
-                paragraph=False,
-                detail=1  # Return bbox + confidence
-            )
+            results, _ = self.reader(processed)
         except Exception as e:
             logger.error(f"OCR detection failed: {e}")
             return []
 
         # Extract numbers
         detections = []
-        for detection in results:
-            if len(detection) >= 3:
-                bbox_points = detection[0]  # [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
-                text = detection[1]
-                confidence = detection[2]
+        sig_config = self.settings.signature
+        for box_points, text, score in (results or []):
+            confidence = float(score)
 
-                # Filter by confidence threshold
-                if confidence < self.settings.ocr.confidence_threshold:
-                    continue
+            # Filter by confidence threshold
+            if confidence < self.settings.ocr.confidence_threshold:
+                continue
 
-                # Extract all 3-6 digit numbers from text
-                matches = re.findall(r'\d{3,6}', text)
-                for match in matches:
-                    num = int(match)
+            # Strip the thousands comma (and any stray punctuation/space) so a
+            # read like "10,620" becomes "10620".
+            digits = re.sub(r"[^0-9]", "", text)
+            if len(digits) not in (3, 4, 5, 6):
+                continue
 
-                    # Valid signature range
-                    sig_config = self.settings.signature
-                    if sig_config.valid_rs_min <= num <= sig_config.valid_rs_max:
-                        # Calculate bounding box
-                        bbox = self._calculate_bbox(bbox_points)
+            num = int(digits)
 
-                        detections.append(OCRResult(
-                            number=num,
-                            confidence=confidence,
-                            bbox=bbox
-                        ))
+            # Valid signature range
+            if sig_config.valid_rs_min <= num <= sig_config.valid_rs_max:
+                detections.append(OCRResult(
+                    number=num,
+                    confidence=confidence,
+                    bbox=self._calculate_bbox(box_points)
+                ))
 
         # Update debouncing state
         self._update_debouncing(detections)

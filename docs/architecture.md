@@ -9,7 +9,7 @@ talk over a local WebSocket.
 │                                                                                      │
 │  ScreenCapture ──► OCREngine ──► RSResolver ──► ConnectionManager ──► WebSocket ─────┼──┐
 │   (mss grab,       (preprocess   (RS number      (aggregate, build                   │  │
-│    scan gating)     + easyocr)    -> ore math)    ScanResult)                        │  │
+│    scan gating)     + RapidOCR)   -> ore math)    ScanResult)                        │  │
 │                                                                                      │  │
 └──────────────────────────────────────────────────────────────────────────────────┘  │
                                                                                          │ ws://127.0.0.1:8765/ws
@@ -27,7 +27,7 @@ talk over a local WebSocket.
 |---|---|
 | `config/settings.py` | Pydantic settings (scan region, OCR/signature/server config). Loads/saves `src/config/settings.json`; env override via `SC_SCANNER_*`. |
 | `capture/capture.py` | `ScreenCapture` — grabs the configured region with `mss`, and "scan-state gating": only returns a frame when the scanner HUD looks active (bright pixels at sample points). |
-| `ocr/ocr_engine.py` | `OCREngine` — preprocesses the region (see [ocr-pipeline.md](ocr-pipeline.md)), runs EasyOCR (digit allowlist), extracts 3–6 digit numbers, and debounces (N consecutive frames). |
+| `ocr/ocr_engine.py` | `OCREngine` — preprocesses the region (see [ocr-pipeline.md](ocr-pipeline.md)), runs RapidOCR (ONNX), strips the comma to extract the 3–6 digit number, and debounces (N consecutive frames). |
 | `resolver/resolver.py` | `RSResolver` — turns a detected RS number into ore matches via division (`detected = base_rs × quantity`), with fuzzy tolerance and OCR-error correction. |
 | `server/app.py` | FastAPI app: the scanning loop, the `/ws` stream, and REST endpoints for config/control. |
 
