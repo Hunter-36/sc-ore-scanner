@@ -28,9 +28,9 @@ export function OreCard({ ore }: OreCardProps) {
         {ore.quantity}x
         {ore.volatile && <span className="volatile-badge">⚠</span>}
       </div>
-      {ore.value != null && (
-        <div className="ore-value" title="Estimated value (UEX Corp)">
-          ≈ {ore.value.toLocaleString()} aUEC
+      {ore.unit_price != null && (
+        <div className="ore-value" title="Market sell price per SCU (UEX Corp)">
+          ≈ {ore.unit_price.toLocaleString()} aUEC/SCU
         </div>
       )}
       {ore.confidence < 0.9 && (
