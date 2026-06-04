@@ -5,19 +5,31 @@ use tauri::{Manager, PhysicalPosition};
 
 fn main() {
     tauri::Builder::default()
+        // Remembers the overlay's position/size across launches (saves on move/exit,
+        // restores on start). State lives in <app config>/.window-state.json.
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
-            // Pin the overlay to the top-right of its monitor, at any resolution
-            // (the config x/y are only a 1920-wide fallback).
             if let Some(window) = app.get_webview_window("main") {
-                if let (Ok(Some(monitor)), Ok(win_size)) =
-                    (window.current_monitor(), window.outer_size())
-                {
-                    let m_pos = monitor.position();
-                    let m_size = monitor.size();
-                    let margin: i32 = 20;
-                    let x = m_pos.x + (m_size.width as i32) - (win_size.width as i32) - margin;
-                    let y = m_pos.y + margin;
-                    let _ = window.set_position(PhysicalPosition::new(x, y));
+                // On first run (no saved window state yet) pin the overlay to the
+                // top-right of its monitor at any resolution. After that, the
+                // window-state plugin restores wherever the user last moved it.
+                let has_saved_state = app
+                    .path()
+                    .app_config_dir()
+                    .map(|dir| dir.join(".window-state.json").exists())
+                    .unwrap_or(false);
+
+                if !has_saved_state {
+                    if let (Ok(Some(monitor)), Ok(win_size)) =
+                        (window.current_monitor(), window.outer_size())
+                    {
+                        let m_pos = monitor.position();
+                        let m_size = monitor.size();
+                        let margin: i32 = 20;
+                        let x = m_pos.x + (m_size.width as i32) - (win_size.width as i32) - margin;
+                        let y = m_pos.y + margin;
+                        let _ = window.set_position(PhysicalPosition::new(x, y));
+                    }
                 }
             }
             Ok(())

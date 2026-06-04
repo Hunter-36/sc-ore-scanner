@@ -51,7 +51,8 @@ yourself - setup.bat handles it.
    shows the ore name and quantity (e.g. "Beryl  3x"), color-coded by tier.
 
 To stop: click the X in the overlay's top corner - this also stops the
-background backend. (You can drag the overlay by its title bar to move it.)
+background backend. (Drag the overlay by its title bar to move it - it
+remembers where you put it next time.)
 
 ------------------------------------------------------------
   "Windows protected your PC"  (SmartScreen)
