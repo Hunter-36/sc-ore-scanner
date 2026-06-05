@@ -44,12 +44,6 @@ struct ScanResult {
     timestamp: f64,
 }
 
-fn logs_dir() -> Option<PathBuf> {
-    std::env::current_exe()
-        .ok()
-        .and_then(|e| e.parent().map(|d| d.join("logs")))
-}
-
 /// Capture the primary monitor as an RGB image (alpha dropped). Targets the
 /// primary monitor explicitly so it matches the calibration overlay's coords.
 pub fn capture_primary() -> anyhow::Result<image::RgbImage> {
@@ -146,8 +140,6 @@ pub fn start(app: AppHandle) {
                 }
                 Some(region) => match capture_primary() {
                     Ok(img) => {
-                        // Preprocess once (crop/upscale/grayscale/CLAHE); save it for
-                        // inspection, then OCR it.
                         let processed = preprocess_for_ocr(
                             &img,
                             Some(region),
@@ -155,9 +147,6 @@ pub fn start(app: AppHandle) {
                             cfg.clahe_clip_limit,
                             cfg.clahe_grid,
                         );
-                        if let Some(dir) = logs_dir() {
-                            let _ = processed.save(dir.join("last_scan.png"));
-                        }
 
                         match recognize_rs_numbers_from_processed(&processed, &ocr, &resolver) {
                             Ok(candidates) => {

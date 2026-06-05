@@ -38,7 +38,7 @@ pub fn recognize_rs_numbers_from_processed(
 ) -> Result<Vec<i64>> {
     let (pw, ph) = processed.dimensions();
     let lines = ocr.recognize_lines(processed)?;
-    log::info!("OCR crop {}x{} -> {} line(s): {:?}", pw, ph, lines.len(), lines);
+    log::debug!("OCR crop {}x{} -> {} line(s): {:?}", pw, ph, lines.len(), lines);
 
     let cfg = resolver.config();
     let mut numbers = Vec::new();
@@ -54,7 +54,7 @@ pub fn recognize_rs_numbers_from_processed(
                 continue;
             };
             if num < cfg.valid_rs_min || num > cfg.valid_rs_max {
-                log::info!(
+                log::debug!(
                     "  candidate {num} out of RS range [{}, {}], skipped",
                     cfg.valid_rs_min, cfg.valid_rs_max
                 );
