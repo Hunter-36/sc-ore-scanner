@@ -39,11 +39,14 @@ struct ScanResult {
     timestamp: f64,
 }
 
-/// Capture the primary monitor as an RGB image (alpha dropped).
+/// Capture the primary monitor as an RGB image (alpha dropped). Targets the
+/// primary monitor explicitly so it matches the calibration overlay's coords.
 fn capture_primary() -> anyhow::Result<image::RgbImage> {
-    let monitor = xcap::Monitor::all()?
-        .into_iter()
-        .next()
+    let monitors = xcap::Monitor::all()?;
+    let monitor = monitors
+        .iter()
+        .find(|m| m.is_primary())
+        .or_else(|| monitors.first())
         .ok_or_else(|| anyhow::anyhow!("no monitor found"))?;
     let rgba = monitor.capture_image()?;
     let (w, h) = (rgba.width(), rgba.height());

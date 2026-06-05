@@ -82,23 +82,87 @@ body {
   opacity: 0.9;
 }
 
-.close-btn {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.close-btn,
+.calibrate-btn {
   background: transparent;
   border: none;
-  color: #ff6688;
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
   padding: 2px 6px;
-  margin-left: 8px;
   border-radius: 3px;
   opacity: 0.7;
   transition: opacity 0.2s ease, background 0.2s ease;
 }
 
+.close-btn {
+  color: #ff6688;
+}
+
+.calibrate-btn {
+  color: #00ccff;
+  font-size: 15px;
+}
+
 .close-btn:hover {
   opacity: 1;
   background: rgba(255, 51, 102, 0.25);
+}
+
+.calibrate-btn:hover {
+  opacity: 1;
+  background: rgba(0, 200, 255, 0.25);
+}
+
+/* Calibration overlay (second window, label "calibrate") */
+.calibrate {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 10, 20, 0.35);
+  cursor: crosshair;
+  overflow: hidden;
+  user-select: none;
+}
+
+.calibrate-hint {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  background: rgba(0, 40, 80, 0.85);
+  border: 1px solid rgba(0, 200, 255, 0.5);
+  border-radius: 6px;
+  color: #e6f7ff;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 0 8px rgba(0, 200, 255, 0.4);
+}
+
+.calibrate-hint .calibrate-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 1px;
+}
+
+.calibrate-rect {
+  position: absolute;
+  border: 2px solid #00ccff;
+  background: rgba(0, 200, 255, 0.12);
+  box-shadow: 0 0 0 9999px rgba(0, 10, 20, 0.25), 0 0 12px rgba(0, 200, 255, 0.6);
+  pointer-events: none;
 }
 
 /* Session footer */

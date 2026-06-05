@@ -1,10 +1,56 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{Manager, PhysicalPosition};
+use tauri::{
+    AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder,
+};
 use tauri_plugin_window_state::StateFlags;
 
 mod scan;
+
+/// Open the full-screen calibration overlay (drag-select the scan region). Re-uses
+/// the existing window if already open. Covers the primary monitor so the dragged
+/// rectangle maps 1:1 to what the scan loop captures.
+#[tauri::command]
+fn open_calibration(app: AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("calibrate") {
+        let _ = w.set_focus();
+        return Ok(());
+    }
+    let win = WebviewWindowBuilder::new(&app, "calibrate", WebviewUrl::App("index.html".into()))
+        .title("Calibrate scan region")
+        .decorations(false)
+        .transparent(true)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+    if let Ok(Some(m)) = win.primary_monitor() {
+        let p = m.position();
+        let s = m.size();
+        let _ = win.set_position(PhysicalPosition::new(p.x, p.y));
+        let _ = win.set_size(PhysicalSize::new(s.width, s.height));
+    }
+    let _ = win.set_focus();
+    Ok(())
+}
+
+/// Persist a calibrated scan region [x, y, w, h] (physical px) into config.json,
+/// preserving other settings. The scan loop re-reads config each cycle, so the
+/// new region takes effect without a restart.
+#[tauri::command]
+fn save_scan_region(app: AppHandle, x: u32, y: u32, w: u32, h: u32) -> Result<(), String> {
+    let path = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| e.to_string())?
+        .join("config.json");
+    let mut cfg = scanner_core::config::Config::load(&path);
+    cfg.scan_region = Some([x, y, w, h]);
+    cfg.save(&path).map_err(|e| e.to_string())?;
+    log::info!("calibrated scan region: [{x}, {y}, {w}, {h}]");
+    Ok(())
+}
 
 /// Log to `logs/scanner.log` next to the exe (matching the v1 layout). Falls
 /// back silently to no file logging if the path can't be created.
@@ -75,6 +121,7 @@ fn main() {
             scan::start(app.handle().clone());
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![open_calibration, save_scan_region])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

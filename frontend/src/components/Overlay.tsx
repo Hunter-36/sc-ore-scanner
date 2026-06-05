@@ -13,6 +13,15 @@ async function closeOverlay() {
   }
 }
 
+async function openCalibration() {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('open_calibration');
+  } catch (err) {
+    console.warn('open_calibration unavailable outside Tauri:', err);
+  }
+}
+
 export function Overlay() {
   const { ores, scannerActive, connected, session } = useOreStore();
   useScanEvents();
@@ -39,14 +48,24 @@ export function Overlay() {
             {connected ? (scannerActive ? 'SCANNING' : 'READY') : 'OFFLINE'}
           </span>
         </div>
-        <button
-          className="close-btn"
-          onClick={closeOverlay}
-          title="Close overlay"
-          aria-label="Close overlay"
-        >
-          ✕
-        </button>
+        <div className="header-actions">
+          <button
+            className="calibrate-btn"
+            onClick={openCalibration}
+            title="Set scan region"
+            aria-label="Set scan region"
+          >
+            ⌖
+          </button>
+          <button
+            className="close-btn"
+            onClick={closeOverlay}
+            title="Close overlay"
+            aria-label="Close overlay"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* Ore List */}
