@@ -4,6 +4,8 @@
 use tauri::{Manager, PhysicalPosition};
 use tauri_plugin_window_state::StateFlags;
 
+mod scan;
+
 fn main() {
     tauri::Builder::default()
         // Remember only the overlay's POSITION across launches (not size), so the
@@ -39,6 +41,9 @@ fn main() {
                     }
                 }
             }
+
+            // Start the Rust scan loop (capture -> detect -> emit "scan-result").
+            scan::start(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

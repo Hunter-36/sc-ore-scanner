@@ -1,16 +1,9 @@
 import { useOreStore } from '../store/useOreStore';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useScanEvents } from '../hooks/useScanEvents';
 import { OreCard } from './OreCard';
-import { BACKEND_HTTP } from '../config';
 
 async function closeOverlay() {
-  // Stop the (windowless) backend first, so it doesn't linger after the overlay
-  // closes. Fire-and-forget; ignore errors (backend may already be down).
-  try {
-    await fetch(`${BACKEND_HTTP}/shutdown`, { method: 'POST' });
-  } catch {
-    /* backend not reachable — nothing to stop */
-  }
+  // The scan loop is in-process (v2), so closing the window exits the whole app.
   try {
     const { getCurrentWindow } = await import('@tauri-apps/api/window');
     await getCurrentWindow().close();
@@ -22,7 +15,7 @@ async function closeOverlay() {
 
 export function Overlay() {
   const { ores, scannerActive, connected, session } = useOreStore();
-  useWebSocket();
+  useScanEvents();
 
   const oreList = Object.entries(ores);
   const hasOres = oreList.length > 0;
