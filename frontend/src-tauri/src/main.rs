@@ -21,16 +21,25 @@ fn open_calibration(app: AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    let win = WebviewWindowBuilder::new(&app, "calibrate", WebviewUrl::App("index.html".into()))
-        .title("Calibrate scan region")
-        .decorations(false)
-        .transparent(true)
-        .always_on_top(true)
-        .skip_taskbar(true)
-        .focused(true)
-        .visible(false) // show after positioning, so it never flashes on the wrong spot
-        .build()
-        .map_err(|e| e.to_string())?;
+    log::info!("building calibration window…");
+    let win = match WebviewWindowBuilder::new(
+        &app,
+        "calibrate",
+        WebviewUrl::App("index.html".into()),
+    )
+    .title("Calibrate scan region")
+    .decorations(false)
+    .transparent(true)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .build()
+    {
+        Ok(w) => w,
+        Err(e) => {
+            log::error!("calibration window build failed: {e}");
+            return Err(e.to_string());
+        }
+    };
 
     // Cover the PRIMARY monitor — the same one capture_primary() scans — so the
     // dragged box maps 1:1 to the capture, regardless of which monitor the

@@ -1,35 +1,41 @@
+import { useState } from 'react';
 import { useOreStore } from '../store/useOreStore';
 import { useScanEvents } from '../hooks/useScanEvents';
 import { OreCard } from './OreCard';
 
-async function closeOverlay() {
-  // Exit the whole app via the Rust `quit` command (hard exit). Falls back to
-  // closing the window if that's unavailable.
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('quit');
-  } catch {
-    try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      await getCurrentWindow().close();
-    } catch (err) {
-      console.warn('quit/close unavailable outside Tauri:', err);
-    }
-  }
-}
-
-async function openCalibration() {
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('open_calibration');
-  } catch (err) {
-    console.warn('open_calibration unavailable outside Tauri:', err);
-  }
-}
-
 export function Overlay() {
   const { ores, scannerActive, configured, connected, session } = useOreStore();
   useScanEvents();
+
+  // Visible indicator so we can see button clicks actually fire (diagnostic).
+  const [debug, setDebug] = useState('');
+
+  async function closeOverlay() {
+    setDebug('✕ clicked — quitting…');
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('quit');
+    } catch (err) {
+      setDebug('quit failed: ' + String(err));
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().close();
+      } catch (err2) {
+        console.warn('quit/close unavailable outside Tauri:', err2);
+      }
+    }
+  }
+
+  async function openCalibration() {
+    setDebug('Set region clicked — opening…');
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('open_calibration');
+      setDebug('calibration opened');
+    } catch (err) {
+      setDebug('calibration failed: ' + String(err));
+    }
+  }
 
   const oreList = Object.entries(ores);
   const hasOres = oreList.length > 0;
@@ -133,6 +139,9 @@ export function Overlay() {
           Session: {session.total_detections} detections · {session.distinct_ores} types
         </div>
       )}
+
+      {/* Diagnostic: shows the last button click. */}
+      {debug && <div className="debug-line">{debug}</div>}
     </div>
   );
 }
