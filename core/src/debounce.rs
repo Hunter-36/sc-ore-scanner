@@ -64,6 +64,14 @@ impl Debouncer {
     pub fn reset(&mut self) {
         self.history.clear();
     }
+
+    /// Change the confirmation threshold in place, preserving detection history —
+    /// so live-tuning the frame count (settings UI) doesn't drop the ore that's
+    /// currently shown. `confirmed()` keys off `min_frames`, so lowering it
+    /// confirms immediately from existing history.
+    pub fn set_min_frames(&mut self, min_frames: u32) {
+        self.min_frames = (min_frames as usize).max(1);
+    }
 }
 
 #[cfg(test)]
@@ -101,6 +109,18 @@ mod tests {
         d.update(&[7080, 88000]); // 88000 is a one-frame misread
         d.update(&[7080]);
         d.update(&[7080]);
+        assert_eq!(d.confirmed(), vec![7080]);
+    }
+
+    #[test]
+    fn set_min_frames_preserves_history() {
+        let mut d = Debouncer::new(3);
+        d.update(&[7080]);
+        d.update(&[7080]);
+        assert!(d.confirmed().is_empty(), "2 frames, threshold 3");
+        // Lowering the threshold confirms immediately from existing history —
+        // no rebuild, no flicker.
+        d.set_min_frames(2);
         assert_eq!(d.confirmed(), vec![7080]);
     }
 }

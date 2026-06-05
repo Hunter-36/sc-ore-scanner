@@ -99,7 +99,8 @@ pub fn start(app: AppHandle) {
 
         // Debounce raw RS numbers: a number must appear in N consecutive frames
         // before it's reported (faithful to v1; filters transient OCR misreads).
-        let mut debouncer = Debouncer::new(Config::load(&config_path).min_consecutive_frames);
+        let mut min_frames = Config::load(&config_path).min_consecutive_frames;
+        let mut debouncer = Debouncer::new(min_frames);
 
         // Track state so we log on change instead of every cycle (no spam).
         let mut last_region: Option<Option<[u32; 4]>> = None;
@@ -108,6 +109,14 @@ pub fn start(app: AppHandle) {
         loop {
             let cfg = Config::load(&config_path);
             let interval = Duration::from_secs_f64(cfg.scan_interval_secs.max(0.2));
+
+            // Live-apply a changed confirm-frames setting WITHOUT rebuilding the
+            // debouncer — set it in place so the currently-shown ore doesn't drop
+            // while the user is tuning the slider.
+            if cfg.min_consecutive_frames != min_frames {
+                min_frames = cfg.min_consecutive_frames;
+                debouncer.set_min_frames(min_frames);
+            }
 
             if last_region != Some(cfg.scan_region) {
                 match cfg.scan_region {

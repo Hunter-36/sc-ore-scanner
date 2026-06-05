@@ -6,6 +6,19 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.0] - 2026-06-05
+
+### Added
+- In-app **settings page** (gear icon): tune scan interval, confirm frames, upscale,
+  and contrast live — with **Responsive / Balanced / Low-impact** presets and a
+  "≈ Xs to confirm" readout. Changes apply without a restart. (#49, #47)
+
+### Changed
+- Config writes are atomic (temp + rename, unique temp per write) so live-tuning
+  can't make the scan loop momentarily drop the scan region.
+- The debouncer updates its frame count in place, so changing "confirm frames"
+  while watching a rock doesn't drop the currently-shown ore.
+
 ## [2.1.1] - 2026-06-05
 
 ### Changed
@@ -37,6 +50,7 @@ v1 was a Python/FastAPI backend + Tauri overlay over a local WebSocket. See the
 [GitHub Releases](https://github.com/Hunter-36/sc-ore-scanner/releases) for the
 full v1 history.
 
+[2.2.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.0
 [2.1.1]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.1.1
 [2.1.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.1.0
 [2.0.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.0.0

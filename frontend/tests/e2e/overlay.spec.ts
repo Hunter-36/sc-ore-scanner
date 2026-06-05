@@ -131,6 +131,16 @@ test('shows "no ores" when scanning but nothing detected', async ({ page }) => {
   await expect(page.locator('.message')).toContainText('No ores detected');
 });
 
+test('settings: gear opens the panel, a preset selects, Done closes it', async ({ page }) => {
+  await page.getByRole('button', { name: 'Settings' }).click();
+  // Panel loads (get_config no-ops in the browser -> defaults).
+  await expect(page.getByRole('button', { name: 'Balanced' })).toBeVisible();
+  await page.getByRole('button', { name: 'Responsive' }).click();
+  await expect(page.getByRole('button', { name: 'Responsive' })).toHaveClass(/active/);
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('.settings')).toHaveCount(0);
+});
+
 test('shows the alternative reading for an ambiguous signature', async ({ page }) => {
   await emitScan(page, {
     ores: {
