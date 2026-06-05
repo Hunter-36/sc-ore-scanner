@@ -7,6 +7,7 @@ pub mod config;
 pub mod ocr;
 pub mod pipeline;
 pub mod preprocess;
+pub mod prices;
 pub mod resolver;
 pub mod signatures;
 

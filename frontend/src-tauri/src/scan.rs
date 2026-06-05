@@ -4,11 +4,20 @@
 
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use scanner_core::{config::Config, ocr::Ocr, pipeline::detect_ores, resolver::Resolver};
+use scanner_core::{
+    config::Config,
+    ocr::Ocr,
+    pipeline::detect_ores,
+    prices::{PriceCache, DEFAULT_FEED_URL},
+    resolver::Resolver,
+};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
+
+/// Re-fetch the price feed at most once an hour (it updates hourly upstream).
+const PRICE_REFRESH: Duration = Duration::from_secs(3600);
 
 #[derive(Serialize, Clone)]
 struct OreOut {
@@ -19,6 +28,8 @@ struct OreOut {
     volatile: bool,
     confidence: f64,
     detected_rs: i64,
+    /// Best sell price per SCU (aUEC), if the feed knows this ore.
+    unit_price: Option<i64>,
 }
 
 #[derive(Serialize, Clone)]
@@ -26,13 +37,6 @@ struct ScanResult {
     ores: HashMap<String, OreOut>,
     scanner_active: bool,
     timestamp: f64,
-}
-
-fn models_dir() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.join("models")))
-        .unwrap_or_else(|| PathBuf::from("models"))
 }
 
 /// Capture the primary monitor as an RGB image (alpha dropped).
@@ -56,14 +60,24 @@ fn capture_primary() -> anyhow::Result<image::RgbImage> {
 /// app config each cycle, so calibration takes effect without a restart.
 pub fn start(app: AppHandle) {
     std::thread::spawn(move || {
-        let ocr = match Ocr::new(&models_dir()) {
+        log::info!("Loading OCR engine (embedded models)...");
+        let ocr = match Ocr::new() {
             Ok(o) => o,
             Err(e) => {
-                eprintln!("[scan] OCR init failed: {e}");
+                log::error!("OCR init failed: {e}");
                 return;
             }
         };
+        log::info!("OCR engine ready.");
         let resolver = Resolver::new();
+
+        let mut prices = PriceCache::new(DEFAULT_FEED_URL);
+        match prices.refresh() {
+            Ok(()) => log::info!("Loaded {} ore prices (UEX).", prices.len()),
+            Err(e) => log::warn!("price feed unavailable ({e}); cards will omit price."),
+        }
+        let mut last_price_refresh = Instant::now();
+
         let config_path = app
             .path()
             .app_config_dir()
@@ -74,12 +88,24 @@ pub fn start(app: AppHandle) {
             let cfg = Config::load(&config_path);
             let interval = Duration::from_secs_f64(cfg.scan_interval_secs.max(0.2));
 
+            // Refresh prices hourly. Reset the timer even on failure so we don't
+            // hammer the feed every cycle while it's down.
+            if last_price_refresh.elapsed() >= PRICE_REFRESH {
+                if let Err(e) = prices.refresh() {
+                    log::warn!("price refresh failed: {e}");
+                }
+                last_price_refresh = Instant::now();
+            }
+
             if let Some(region) = cfg.scan_region {
-                match capture_primary().and_then(|img| detect_ores(&img, Some(region), cfg.upscale, &ocr, &resolver)) {
+                match capture_primary()
+                    .and_then(|img| detect_ores(&img, Some(region), cfg.upscale, &ocr, &resolver))
+                {
                     Ok(agg) => {
                         let ores: HashMap<String, OreOut> = agg
                             .into_iter()
                             .map(|(id, m)| {
+                                let unit_price = prices.sell_price(&id);
                                 (
                                     id,
                                     OreOut {
@@ -90,6 +116,7 @@ pub fn start(app: AppHandle) {
                                         volatile: m.ore.volatile,
                                         confidence: (m.confidence * 100.0).round() / 100.0,
                                         detected_rs: m.detected_rs,
+                                        unit_price,
                                     },
                                 )
                             })
@@ -97,7 +124,7 @@ pub fn start(app: AppHandle) {
                         let result = ScanResult { ores, scanner_active: true, timestamp: 0.0 };
                         let _ = app.emit("scan-result", result);
                     }
-                    Err(e) => eprintln!("[scan] {e}"),
+                    Err(e) => log::error!("scan: {e}"),
                 }
             }
 

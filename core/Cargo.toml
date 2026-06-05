@@ -11,3 +11,7 @@ anyhow = "1"
 image = "0.25"
 ocrs = "0.10"
 rten = "0.21"
+ureq = { version = "2", features = ["tls"] }
+
+[build-dependencies]
+ureq = { version = "2", features = ["tls"] }

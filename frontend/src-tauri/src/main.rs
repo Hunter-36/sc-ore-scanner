@@ -6,7 +6,36 @@ use tauri_plugin_window_state::StateFlags;
 
 mod scan;
 
+/// Log to `logs/scanner.log` next to the exe (matching the v1 layout). Falls
+/// back silently to no file logging if the path can't be created.
+fn init_logging() {
+    let log_path = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|d| d.join("logs")))
+        .map(|dir| {
+            let _ = std::fs::create_dir_all(&dir);
+            dir.join("scanner.log")
+        });
+
+    if let Some(path) = log_path {
+        if let Ok(file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+        {
+            let _ = simplelog::WriteLogger::init(
+                simplelog::LevelFilter::Info,
+                simplelog::Config::default(),
+                file,
+            );
+        }
+    }
+}
+
 fn main() {
+    init_logging();
+    log::info!("SC Ore Scanner v{} starting.", env!("CARGO_PKG_VERSION"));
+
     tauri::Builder::default()
         // Remember only the overlay's POSITION across launches (not size), so the
         // window dimensions always come from the config — otherwise a stored size

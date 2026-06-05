@@ -1,21 +1,24 @@
 //! OCR via the pure-Rust `ocrs` engine (rten backend — no Python, no native
-//! ONNX runtime). Loads the detection/recognition models from a directory.
-
-use std::path::Path;
+//! ONNX runtime). The detection/recognition models are embedded into the binary
+//! at build time (see build.rs), so the app ships as one self-contained exe.
 
 use anyhow::Result;
 use ocrs::{ImageSource, OcrEngine, OcrEngineParams};
 use rten::Model;
+
+// Fetched by build.rs into OUT_DIR, baked into the binary here.
+static DETECTION_MODEL: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/text-detection.rten"));
+static RECOGNITION_MODEL: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/text-recognition.rten"));
 
 pub struct Ocr {
     engine: OcrEngine,
 }
 
 impl Ocr {
-    /// Load `text-detection.rten` and `text-recognition.rten` from `models_dir`.
-    pub fn new(models_dir: &Path) -> Result<Self> {
-        let detection = Model::load_file(models_dir.join("text-detection.rten"))?;
-        let recognition = Model::load_file(models_dir.join("text-recognition.rten"))?;
+    /// Build the OCR engine from the embedded models.
+    pub fn new() -> Result<Self> {
+        let detection = Model::load_static_slice(DETECTION_MODEL)?;
+        let recognition = Model::load_static_slice(RECOGNITION_MODEL)?;
         let engine = OcrEngine::new(OcrEngineParams {
             detection_model: Some(detection),
             recognition_model: Some(recognition),

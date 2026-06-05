@@ -1,18 +1,15 @@
 //! Local accuracy check for the Rust detection pipeline against the real
-//! capture fixtures. Run with the ocrs models dir:
+//! capture fixtures. Models are embedded in the binary (build.rs), so just run:
 //!   cargo run --example validate --release
-//! (Points at the spike models + the repo's test_images by default.)
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use scanner_core::{ocr::Ocr, pipeline::detect_ores, resolver::Resolver};
 
 fn main() -> anyhow::Result<()> {
-    // Models dir: first CLI arg, else ./models. (ocrs .rten models aren't committed.)
-    let models: PathBuf = std::env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("models"));
     let img_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../backend/tests/test_images");
 
-    let ocr = Ocr::new(&models)?;
+    let ocr = Ocr::new()?;
     let resolver = Resolver::new();
     let region = Some([193u32, 122, 109, 48]);
 
