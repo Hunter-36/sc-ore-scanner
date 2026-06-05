@@ -12,6 +12,7 @@ image = "0.25"
 ocrs = "0.10"
 rten = "0.21"
 ureq = { version = "2", features = ["tls"] }
+log = "0.4"
 
 [build-dependencies]
 ureq = { version = "2", features = ["tls"] }

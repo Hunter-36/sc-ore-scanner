@@ -42,6 +42,12 @@ struct ScanResult {
     timestamp: f64,
 }
 
+fn logs_dir() -> Option<PathBuf> {
+    std::env::current_exe()
+        .ok()
+        .and_then(|e| e.parent().map(|d| d.join("logs")))
+}
+
 /// Capture the primary monitor as an RGB image (alpha dropped). Targets the
 /// primary monitor explicitly so it matches the calibration overlay's coords.
 pub fn capture_primary() -> anyhow::Result<image::RgbImage> {
@@ -132,7 +138,19 @@ pub fn start(app: AppHandle) {
                     );
                 }
                 Some(region) => {
-                    match capture_primary()
+                    let captured = capture_primary().map(|img| {
+                        // DEBUG: save the exact crop we feed to OCR for inspection.
+                        let processed = scanner_core::preprocess::crop_and_upscale(
+                            &img,
+                            Some(region),
+                            cfg.upscale,
+                        );
+                        if let Some(dir) = logs_dir() {
+                            let _ = processed.save(dir.join("last_scan.png"));
+                        }
+                        img
+                    });
+                    match captured
                         .and_then(|img| detect_ores(&img, Some(region), cfg.upscale, &ocr, &resolver))
                     {
                         Ok(agg) => {

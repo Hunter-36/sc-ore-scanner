@@ -18,7 +18,9 @@ pub fn detect_ores(
     resolver: &Resolver,
 ) -> Result<HashMap<String, OreMatch>> {
     let processed = crop_and_upscale(img, region, scale);
+    let (pw, ph) = processed.dimensions();
     let lines = ocr.recognize_lines(&processed)?;
+    log::info!("OCR crop {}x{} -> {} line(s): {:?}", pw, ph, lines.len(), lines);
 
     let cfg = resolver.config();
     let mut matches: Vec<OreMatch> = Vec::new();
@@ -33,6 +35,7 @@ pub fn detect_ores(
             continue;
         };
         if num < cfg.valid_rs_min || num > cfg.valid_rs_max {
+            log::info!("  candidate {num} out of RS range [{}, {}], skipped", cfg.valid_rs_min, cfg.valid_rs_max);
             continue;
         }
         // Best ore per reading (exact beats fuzzy), like the v1 scanning loop.

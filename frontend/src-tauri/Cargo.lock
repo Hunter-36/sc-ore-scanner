@@ -3263,6 +3263,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "image",
+ "log",
  "ocrs",
  "rten",
  "serde",
