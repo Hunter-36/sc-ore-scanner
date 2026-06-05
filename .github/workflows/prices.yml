@@ -2,7 +2,7 @@ name: Prices
 
 # Fetches Star Citizen ore prices from UEX Corp (public /commodities endpoint —
 # no token needed) and publishes a small prices.json to GitHub Pages, which the
-# scanner backend reads on a timer. UEX is community-reported/averaged data
+# app reads on a timer. UEX is community-reported/averaged data
 # (a guideline, not a live per-terminal quote), but prices do drift with player
 # supply/demand — so we refresh hourly. Cheap to change.
 #

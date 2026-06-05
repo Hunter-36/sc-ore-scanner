@@ -1,10 +1,10 @@
 [package]
 name = "sc-ore-scanner"
 version = "2.0.0"
-description = "Star Citizen mining overlay"
-authors = ["you"]
-license = ""
-repository = ""
+description = "Star Citizen mining overlay — single-binary all-Rust app"
+authors = ["Hunter-36"]
+license = "MIT"
+repository = "https://github.com/Hunter-36/sc-ore-scanner"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

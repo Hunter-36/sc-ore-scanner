@@ -1,4 +1,4 @@
-//! Resolver tests — mirror backend/tests/unit/test_resolver.py.
+//! Resolver tests — mirror the v1 Python resolver unit tests.
 
 use scanner_core::Resolver;
 

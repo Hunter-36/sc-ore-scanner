@@ -3,6 +3,8 @@ name = "scanner-core"
 version = "0.1.0"
 edition = "2021"
 description = "Core detection logic for SC Ore Scanner (RS -> ore resolver, signatures, config)"
+license = "MIT"
+repository = "https://github.com/Hunter-36/sc-ore-scanner"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

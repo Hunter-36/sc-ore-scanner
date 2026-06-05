@@ -1,5 +1,4 @@
-//! Image preprocessing for OCR, faithful to the v1 Python pipeline
-//! (`backend/src/ocr/ocr_engine.py` `preprocess_image`):
+//! Image preprocessing for OCR, faithful to the v1 Python `preprocess_image`:
 //!   crop region -> upscale (Lanczos) -> grayscale -> CLAHE contrast boost.
 //!
 //! Contrast-based, NOT threshold-based — aggressive thresholding destroyed digit
