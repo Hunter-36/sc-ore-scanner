@@ -224,6 +224,37 @@ mod tests {
     }
 
     #[test]
+    fn ambiguous_asteroid_signature_keeps_both() {
+        // 4000 = 1x I-Type Asteroid (4000) = 2x Salvage Panel (2000) — both exact.
+        let r = crate::resolver::Resolver::new();
+        let agg = super::resolve_and_aggregate(&[4000], &r);
+        assert_eq!(agg.len(), 1, "one primary card");
+        let det = agg.values().next().unwrap();
+        let mut all = det.alternatives.clone();
+        all.push(format!("{}x {}", det.quantity, det.ore.name));
+        all.sort();
+        assert_eq!(
+            all,
+            vec![
+                "1x I-Type Asteroid".to_string(),
+                "2x Salvage Panel".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn unique_asteroid_signature_has_no_alternatives() {
+        // 4750 = 1x P-Type Asteroid; nearby S-Type (4720) is only a fuzzy match,
+        // so it must not leak in as a card or an alternative.
+        let r = crate::resolver::Resolver::new();
+        let agg = super::resolve_and_aggregate(&[4750], &r);
+        assert_eq!(agg.len(), 1);
+        let det = agg.values().next().unwrap();
+        assert_eq!(det.ore.name, "P-Type Asteroid");
+        assert!(det.alternatives.is_empty());
+    }
+
+    #[test]
     fn clustered_values_do_not_leak_fuzzy_neighbours() {
         // Beryl 3540 / Taranite 3555 / Borase 3570 sit within each other's fuzzy
         // margin (~35), but an exact reading must surface ONLY itself — no fuzzy
