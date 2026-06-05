@@ -10,6 +10,7 @@ export interface OreData {
   detected_rs: number;
   unit_price?: number | null;  // aUEC per SCU (UEX Corp), if available
   value?: number | null;       // unit_price * quantity
+  alternatives?: string[];     // equally-likely readings of an ambiguous RS, e.g. ["5x Aslarite"]
 }
 
 export interface SessionSummary {

@@ -28,6 +28,14 @@ export function OreCard({ ore }: OreCardProps) {
         {ore.quantity}x
         {ore.volatile && <span className="volatile-badge">⚠</span>}
       </div>
+      {ore.alternatives && ore.alternatives.length > 0 && (
+        <div
+          className="ore-alt"
+          title="Ambiguous radar signature — could be either reading"
+        >
+          ⇄ or {ore.alternatives.join(' / ')}
+        </div>
+      )}
       {ore.unit_price != null && (
         <div className="ore-value" title="Market sell price per SCU (UEX Corp)">
           ≈ {ore.unit_price.toLocaleString()} aUEC/SCU
