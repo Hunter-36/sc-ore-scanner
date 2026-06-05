@@ -1,5 +1,5 @@
 //! Resolves a detected RS number to ore matches via division math + OCR-error
-//! correction. Ported from `backend/src/resolver/resolver.py`.
+//! correction. A faithful port of the v1 Python resolver.
 
 use std::collections::HashMap;
 

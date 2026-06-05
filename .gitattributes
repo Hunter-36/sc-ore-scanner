@@ -1,0 +1,11 @@
+# Normalize line endings: store as LF in the repo and check out as LF, so Windows
+# autocrlf stops warning on every commit. Editors (VS Code, etc.) handle LF fine.
+* text=auto eol=lf
+
+# Binary assets — never convert.
+*.png binary
+*.ico binary
+*.icns binary
+*.rten binary
+*.woff binary
+*.woff2 binary

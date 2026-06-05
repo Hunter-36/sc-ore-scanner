@@ -4,8 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
  * Playwright config for the overlay's display-level E2E tests.
  *
  * Boots the real Vite dev server (port 1420, same as Tauri uses) and drives the
- * overlay in a headless browser. The tests stand up a mock backend WebSocket so
- * the overlay renders exactly what it would with a live scan.
+ * overlay in a headless browser. With no Tauri runtime, the tests inject scans via
+ * the dev-only `mock-scan` event and reach the calibration view via `?calibrate`.
  */
 export default defineConfig({
   testDir: './tests/e2e',

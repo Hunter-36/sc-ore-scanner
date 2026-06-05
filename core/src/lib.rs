@@ -1,7 +1,6 @@
-//! Core detection logic for SC Ore Scanner (the v2, all-Rust pipeline).
-//!
-//! Phase 1: the RS-number -> ore resolver and the embedded signature database.
-//! Ported from the Python `backend/src/resolver` + `data/signatures.json`.
+//! Core detection logic for SC Ore Scanner — the all-Rust pipeline: screen crop ->
+//! preprocess -> OCR (ocrs) -> RS-number extraction -> debounce -> resolve to ore.
+//! A faithful port of the v1 Python detection pipeline.
 
 pub mod config;
 pub mod debounce;

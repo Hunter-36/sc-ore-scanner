@@ -4,7 +4,7 @@ prices.json for the overlay.
 UEX's /commodities endpoint is public (no auth) and already includes per-SCU
 buy/sell prices. This script filters it down to the ores we detect (matched by
 name) so the published file stays tiny. Run by .github/workflows/prices.yml and
-deployed to GitHub Pages; the scanner backend fetches it on a timer and caches it.
+deployed to GitHub Pages; the app fetches it on a timer and caches it.
 
 Data: UEX Corp (https://uexcorp.space).
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 
 UEX_URL = "https://api.uexcorp.uk/2.0/commodities"
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SIGNATURES = REPO_ROOT / "backend" / "data" / "signatures.json"
+SIGNATURES = REPO_ROOT / "core" / "data" / "signatures.json"
 OUT = REPO_ROOT / "public" / "prices.json"
 
 
