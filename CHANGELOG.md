@@ -1,0 +1,42 @@
+# Changelog
+
+All notable changes to SC Ore Scanner. This project follows
+[Semantic Versioning](https://semver.org/) and
+[Conventional Commits](https://www.conventionalcommits.org/). Each GitHub Release
+also has an auto-generated, per-PR "What's Changed" list; this file is the
+curated, human-readable summary.
+
+## [2.1.1] - 2026-06-05
+
+### Changed
+- Screen capture now converts only the calibrated scan region to RGB each cycle
+  instead of the whole monitor frame — much less CPU on high-resolution displays. (#38)
+
+### Security
+- `save_scan_region` rejects regions smaller than 8 px so a bad value can't
+  silently break detection. (#41)
+
+## [2.1.0] - 2026-06-05
+
+### Added
+- Ambiguous radar signatures now show every equally-likely reading
+  (e.g. "6× Savrilium / 5× Aslarite") instead of silently committing to one. (#21)
+
+## [2.0.0] - 2026-06-05
+
+### Changed
+- **BREAKING:** rewrote the app as a single self-contained Rust binary (Tauri) —
+  dropped the Python/FastAPI backend and the WebSocket. Detection runs in-process
+  with `xcap` screen capture and the embedded pure-Rust `ocrs` OCR engine. Ships
+  as one exe (no Python, no install). (#24)
+- In-app calibration (drag-to-select) replaces the Python `calibrate.py`.
+
+## 1.4.3 and earlier
+
+v1 was a Python/FastAPI backend + Tauri overlay over a local WebSocket. See the
+[GitHub Releases](https://github.com/Hunter-36/sc-ore-scanner/releases) for the
+full v1 history.
+
+[2.1.1]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.1.1
+[2.1.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.1.0
+[2.0.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.0.0

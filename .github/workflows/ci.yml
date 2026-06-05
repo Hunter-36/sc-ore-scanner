@@ -91,6 +91,33 @@ jobs:
       - name: cargo check
         run: cargo check --manifest-path frontend/src-tauri/Cargo.toml
 
+  audit:
+    name: Dependency audit (advisory)
+    runs-on: ubuntu-latest
+    # Advisory only — surfaces vulns without blocking merges (transitive
+    # advisories we can't immediately fix shouldn't gate releases).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - name: cargo audit (core)
+        run: cargo audit --file core/Cargo.lock
+      - name: cargo audit (app)
+        run: cargo audit --file frontend/src-tauri/Cargo.lock
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: pnpm audit
+        working-directory: frontend
+        run: pnpm audit --prod
+
   versions:
     name: Version consistency
     runs-on: ubuntu-latest

@@ -91,3 +91,30 @@ fn quantity_out_of_range_no_beryl() {
     let m = r.resolve(3540 * 11, 1.0);
     assert!(m.iter().all(|x| x.ore.name != "Beryl"));
 }
+
+#[test]
+fn near_neighbor_disambiguation() {
+    // Beryl 3540 / Taranite 3555 / Borase 3570 sit 15 RS apart; the error margin
+    // (~35) overlaps all three, so each exact reading must still win over its
+    // fuzzy neighbours on the confidence penalty.
+    let r = Resolver::new();
+    for (rs, name) in [(3540, "Beryl"), (3555, "Taranite"), (3570, "Borase")] {
+        let top = r
+            .resolve(rs, 1.0)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| panic!("expected a match for {rs}"));
+        assert_eq!(top.ore.name, name, "rs {rs} should resolve to {name}");
+        assert_eq!(top.quantity, 1);
+        assert_eq!(top.error_margin, 0, "rs {rs} is exact");
+    }
+}
+
+#[test]
+fn config_matches_v1_defaults() {
+    let cfg = Resolver::new().config().clone();
+    assert_eq!(cfg.valid_rs_min, 100);
+    assert_eq!(cfg.valid_rs_max, 200_000);
+    assert_eq!(cfg.min_quantity, 1);
+    assert_eq!(cfg.max_quantity, 10);
+}
