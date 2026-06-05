@@ -67,3 +67,6 @@ temp/
 .env
 .env.local
 .env.*.local
+
+# Tauri generated schemas (build artifact)
+frontend/src-tauri/gen/
