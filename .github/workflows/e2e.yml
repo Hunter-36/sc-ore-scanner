@@ -1,5 +1,7 @@
 name: E2E
 
+# OCR accuracy e2e now lives in the Rust core-tests job (CI workflow); this runs
+# the overlay's display-level Playwright tests.
 on:
   push:
     branches: [master, main]
@@ -11,33 +13,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend-ocr-e2e:
-    name: Backend OCR pipeline (real captures)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install system libs (OpenCV + headless X)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1 libglib2.0-0 xvfb
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Install full dependencies (incl. RapidOCR; no PyTorch)
-        run: uv pip install --system -r requirements.txt -r requirements-dev.txt
-
-      - name: Run OCR end-to-end tests (10x per capture, >=90% pass)
-        run: xvfb-run -a pytest tests/e2e -v
-
   frontend-display-e2e:
     name: Frontend overlay display (Playwright)
     runs-on: ubuntu-latest

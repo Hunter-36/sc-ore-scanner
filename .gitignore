@@ -37,6 +37,7 @@ frontend/.playwright/
 
 # Tauri / Rust
 frontend/src-tauri/target/
+core/target/
 frontend/dist/
 
 # Generated price feed (built by the prices workflow, deployed to Pages)
@@ -66,3 +67,6 @@ temp/
 .env
 .env.local
 .env.*.local
+
+# Tauri generated schemas (build artifact)
+frontend/src-tauri/gen/

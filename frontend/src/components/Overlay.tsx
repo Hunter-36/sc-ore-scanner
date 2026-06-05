@@ -1,28 +1,33 @@
 import { useOreStore } from '../store/useOreStore';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useScanEvents } from '../hooks/useScanEvents';
 import { OreCard } from './OreCard';
-import { BACKEND_HTTP } from '../config';
-
-async function closeOverlay() {
-  // Stop the (windowless) backend first, so it doesn't linger after the overlay
-  // closes. Fire-and-forget; ignore errors (backend may already be down).
-  try {
-    await fetch(`${BACKEND_HTTP}/shutdown`, { method: 'POST' });
-  } catch {
-    /* backend not reachable — nothing to stop */
-  }
-  try {
-    const { getCurrentWindow } = await import('@tauri-apps/api/window');
-    await getCurrentWindow().close();
-  } catch (err) {
-    // Not running inside Tauri (e.g. browser/dev) — nothing to close.
-    console.warn('close() unavailable outside Tauri:', err);
-  }
-}
 
 export function Overlay() {
-  const { ores, scannerActive, connected, session } = useOreStore();
-  useWebSocket();
+  const { ores, scannerActive, configured, connected, session } = useOreStore();
+  useScanEvents();
+
+  async function closeOverlay() {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('quit');
+    } catch {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        await getCurrentWindow().close();
+      } catch (err) {
+        console.warn('quit/close unavailable outside Tauri:', err);
+      }
+    }
+  }
+
+  async function openCalibration() {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('open_calibration');
+    } catch (err) {
+      console.warn('open_calibration unavailable outside Tauri:', err);
+    }
+  }
 
   const oreList = Object.entries(ores);
   const hasOres = oreList.length > 0;
@@ -37,23 +42,53 @@ export function Overlay() {
 
   return (
     <div className="overlay">
-      {/* Header */}
-      <div className="overlay-header" data-tauri-drag-region>
-        <div className="title">SC ORE SCANNER</div>
-        <div className="status">
-          <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`} />
-          <span className="status-text">
-            {connected ? (scannerActive ? 'SCANNING' : 'READY') : 'OFFLINE'}
-          </span>
+      {/* Header. Only the title/status area is a drag region — the buttons must
+          NOT be inside it, or Tauri's drag handler swallows their clicks. */}
+      <div className="overlay-header">
+        <div className="header-drag" data-tauri-drag-region>
+          <div className="title">SC ORE SCANNER</div>
+          <div className="status">
+            <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`} />
+            <span className="status-text">
+              {connected ? (scannerActive ? 'SCANNING' : 'READY') : 'OFFLINE'}
+            </span>
+          </div>
         </div>
-        <button
-          className="close-btn"
-          onClick={closeOverlay}
-          title="Close overlay"
-          aria-label="Close overlay"
-        >
-          ✕
-        </button>
+        <div className="header-actions">
+          <button
+            className="calibrate-btn"
+            onClick={openCalibration}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Set scan region"
+            aria-label="Set scan region"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <circle cx="12" cy="12" r="7" />
+              <line x1="12" y1="1" x2="12" y2="4" />
+              <line x1="12" y1="20" x2="12" y2="23" />
+              <line x1="1" y1="12" x2="4" y2="12" />
+              <line x1="20" y1="12" x2="23" y2="12" />
+            </svg>
+            <span>Set region</span>
+          </button>
+          <button
+            className="close-btn"
+            onClick={closeOverlay}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Close / quit"
+            aria-label="Close overlay"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {/* Ore List */}
@@ -61,15 +96,23 @@ export function Overlay() {
         {!connected && (
           <div className="message">
             <p>Starting scanner…</p>
-            <p className="hint">First launch loads the OCR engine (~15–20s). If this
-              persists, check logs/scanner.log.</p>
+            <p className="hint">Loading the OCR engine (~15–20s on first launch). If
+              this persists, check logs/scanner.log.</p>
           </div>
         )}
 
-        {connected && !hasOres && (
+        {connected && !configured && (
+          <div className="message">
+            <p>Set your scan region</p>
+            <p className="hint">Click <b>Set region</b> (top-right), then drag a box
+              around the mining scanner's <b>RS</b> number.</p>
+          </div>
+        )}
+
+        {connected && configured && !hasOres && (
           <div className="message">
             <p>{scannerActive ? 'No ores detected' : 'Waiting for scanner...'}</p>
-            <p className="hint">Point scanner at ores in-game</p>
+            <p className="hint">Point your scanner at ore deposits in-game.</p>
           </div>
         )}
 

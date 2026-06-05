@@ -12,36 +12,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend-unit:
-    name: Backend unit tests
+  core-tests:
+    name: Core (Rust) unit + e2e tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system libs (OpenCV + headless X for mss)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1 libglib2.0-0 xvfb
-
-      - uses: actions/setup-python@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          python-version: "3.11"
+          components: rustfmt, clippy
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
 
-      - name: Install dev dependencies (core, no ML stack)
-        run: uv pip install --system -r requirements-dev.txt
+      - name: Format check
+        run: cargo fmt --manifest-path core/Cargo.toml --check
 
-      - name: Lint (ruff)
-        run: ruff check .
+      - name: Clippy
+        run: cargo clippy --manifest-path core/Cargo.toml -- -D warnings
 
-      - name: Run unit tests
-        # mss opens an X display in the FastAPI lifespan, so run under xvfb.
-        run: xvfb-run -a pytest tests/unit
+      # build.rs fetches the ocrs models; the e2e test runs the real OCR over the
+      # capture fixtures (the Rust port of the old Python manifest e2e).
+      - name: Test (unit + OCR accuracy e2e)
+        run: cargo test --manifest-path core/Cargo.toml --release
 
   frontend-unit:
     name: Frontend typecheck + unit tests
@@ -72,7 +66,7 @@ jobs:
       - name: Unit tests (vitest)
         run: pnpm test
 
-  rust-check:
+  tauri-check:
     name: Tauri (Rust) check
     runs-on: ubuntu-latest
     steps:

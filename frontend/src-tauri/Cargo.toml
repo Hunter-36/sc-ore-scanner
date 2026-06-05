@@ -1,6 +1,6 @@
 [package]
 name = "sc-ore-scanner"
-version = "1.4.3"
+version = "2.0.0"
 description = "Star Citizen mining overlay"
 authors = ["you"]
 license = ""
@@ -17,6 +17,12 @@ tauri = { version = "2.0", features = ["devtools"] }
 tauri-plugin-window-state = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+scanner-core = { path = "../../core" }
+xcap = "0.0.14"
+image = "0.25"
+anyhow = "1"
+log = "0.4"
+simplelog = "0.12"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

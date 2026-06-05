@@ -1,7 +1,7 @@
 {
   "identifier": "default",
-  "description": "Permissions for the overlay window: close and drag-to-move.",
-  "windows": ["main"],
+  "description": "Permissions for the overlay + calibration windows: close, drag-to-move.",
+  "windows": ["main", "calibrate"],
   "permissions": [
     "core:default",
     "core:window:allow-close",

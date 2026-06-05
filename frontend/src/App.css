@@ -40,8 +40,18 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: move;
+  gap: 10px;
   user-select: none;
+}
+
+.header-drag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  cursor: move;
 }
 
 .title {
@@ -82,6 +92,12 @@ body {
   opacity: 0.9;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .close-btn {
   background: transparent;
   border: none;
@@ -89,16 +105,107 @@ body {
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
-  padding: 2px 6px;
-  margin-left: 8px;
-  border-radius: 3px;
-  opacity: 0.7;
+  padding: 4px 7px;
+  border-radius: 4px;
+  opacity: 0.75;
   transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.calibrate-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 200, 255, 0.12);
+  border: 1px solid rgba(0, 200, 255, 0.5);
+  color: #00ccff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 9px;
+  border-radius: 5px;
+  transition: background 0.2s ease;
 }
 
 .close-btn:hover {
   opacity: 1;
   background: rgba(255, 51, 102, 0.25);
+}
+
+.calibrate-btn:hover {
+  background: rgba(0, 200, 255, 0.28);
+}
+
+/* Calibration overlay (label "calibrate"): full-screen, semi-transparent, like
+   the old Python calibrate.py. Drag a box; release saves. */
+.calibrate {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(2, 10, 22, 0.4);
+  cursor: crosshair;
+  overflow: hidden;
+  user-select: none;
+  outline: none;
+}
+
+.calibrate-panel {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 84vw);
+  padding: 18px 22px;
+  background: rgba(0, 30, 60, 0.95);
+  border: 1px solid rgba(0, 200, 255, 0.55);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 18px rgba(0, 200, 255, 0.25);
+  text-align: center;
+  cursor: default;
+}
+
+.calibrate-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #00ccff;
+  text-shadow: 0 0 10px rgba(0, 200, 255, 0.5);
+}
+
+.calibrate-steps {
+  margin: 10px 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #e6f7ff;
+}
+
+.calibrate-cancel {
+  background: rgba(255, 51, 102, 0.18);
+  border: 1px solid rgba(255, 102, 136, 0.6);
+  color: #ff8aa3;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.calibrate-cancel:hover {
+  background: rgba(255, 51, 102, 0.32);
+}
+
+/* The selection box: transparent blue fill, bright blue border, dimmed outside. */
+.calibrate-box {
+  position: absolute;
+  border: 2px solid #2da8ff;
+  background: rgba(45, 168, 255, 0.18);
+  box-shadow: 0 0 0 9999px rgba(2, 10, 22, 0.35), 0 0 14px rgba(45, 168, 255, 0.85),
+    inset 0 0 12px rgba(45, 168, 255, 0.35);
+  pointer-events: none;
 }
 
 /* Session footer */

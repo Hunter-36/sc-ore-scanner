@@ -20,6 +20,7 @@ export interface SessionSummary {
 export interface ScanResult {
   ores: Record<string, OreData>;
   scanner_active: boolean;
+  configured?: boolean;  // false until a scan region is calibrated
   timestamp: number;
   session?: SessionSummary;
 }
@@ -29,6 +30,7 @@ const EMPTY_SESSION: SessionSummary = { distinct_ores: 0, total_detections: 0 };
 interface OreStore {
   ores: Record<string, OreData>;
   scannerActive: boolean;
+  configured: boolean;
   connected: boolean;
   lastUpdate: number;
   session: SessionSummary;
@@ -43,6 +45,7 @@ interface OreStore {
 export const useOreStore = create<OreStore>((set) => ({
   ores: {},
   scannerActive: false,
+  configured: false,
   connected: false,
   lastUpdate: 0,
   session: EMPTY_SESSION,
@@ -56,6 +59,7 @@ export const useOreStore = create<OreStore>((set) => ({
   updateFromScan: (result) => set({
     ores: result.ores,
     scannerActive: result.scanner_active,
+    configured: result.configured ?? true,
     lastUpdate: result.timestamp,
     session: result.session ?? EMPTY_SESSION
   }),

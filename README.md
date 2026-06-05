@@ -1,36 +1,36 @@
 # SC Ore Scanner
 
-Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number off the mining scanner HUD on screen, matches it to the corresponding ore type, and shows the ore name and quantity in an always-on-top overlay.
+Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number off the mining scanner HUD on screen, matches it to the corresponding ore type, and shows the ore name, quantity, and market price in an always-on-top overlay.
 
 ![CI](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/ci.yml/badge.svg)
 ![E2E](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/e2e.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-1.4.3-blue)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![Star Citizen](https://img.shields.io/badge/Star%20Citizen-4.7%2B-yellow)
-![Python](https://img.shields.io/badge/python-3.11+-green)
 ![Tauri](https://img.shields.io/badge/tauri-2.0-orange)
+![Rust](https://img.shields.io/badge/rust-stable-orange)
+
+> **v2.0.0 is an all-Rust rewrite** — one self-contained app, no Python, no setup.
+> (v1 was a Python backend + Tauri frontend.)
 
 ## Download & Play
 
 **[Download the latest release](https://github.com/Hunter-36/sc-ore-scanner/releases/latest)** — Windows 10/11.
 
-Nothing to install by hand — `setup.bat` installs `uv`, which then provisions a
-private Python and all dependencies for you. (Node and Rust are only needed if you
-build from source.)
+Pick one:
+- **Installer (recommended):** run `SC Ore Scanner_<version>_x64-setup.exe` (or the `.msi`).
+- **Portable:** unzip `…-windows-portable.zip` and run `SC Ore Scanner.exe`. Nothing to install.
 
-1. Download `sc-ore-scanner-<version>-windows.zip` from the release above and
-   **unzip it** to a location of your choice (Desktop, a games folder, anywhere).
-2. Run **`setup.bat`** once — installs the backend (~150 MB download) and walks you
-   through calibrating where the RS number shows on your mining HUD.
-3. Run **`launch.bat`** to play — the overlay appears top-right and shows the ore
-   (e.g. `Beryl 3x`) within ~2 s of looking at a radar signature. Close it with the
-   **✕** in the overlay's top corner (then close the backend window).
+Then:
+1. Launch it. The overlay appears top-right; the OCR engine warms up for ~15–20s.
+2. Click **Set region**, drag a box around the mining scanner's **RS** number, and release.
+3. Mine — the ore (e.g. `Beryl 3x`) and its market price appear within a couple of
+   seconds of looking at a radar signature. Quit with the **✕** in the overlay.
 
-> 💡 **Calibration tip:** if detection is spotty on first setup, re-run `setup.bat`
-> and draw a slightly **larger** box — leave some margin around the RS readout so the
-> number is always inside it. Too tight and it drifts out of frame.
+> 💡 **Calibration tip:** leave a little margin around the RS readout so the number
+> stays inside the box. You can re-run **Set region** any time.
 
 > ⚠️ Windows may show **"Windows protected your PC"** for this free, unsigned tool —
-> click **More info → Run anyway**. Full instructions are in the `README.txt` inside the zip.
+> click **More info → Run anyway**.
 
 > 🛠️ Want to build it yourself or contribute? See [Development](#development-build-from-source).
 
@@ -58,273 +58,149 @@ comfortable with the current RSI
 
 ## Features
 
-### Backend (Python + FastAPI)
-- 🎯 **Screen Capture**: Fast capture with `mss` library
-- 🔍 **Scan-State Gating**: Only runs OCR when scanner HUD is active
-- 🤖 **RapidOCR (ONNX)**: lightweight OCR with CLAHE preprocessing — no PyTorch, ~150 MB install
-- 📊 **Debouncing**: Requires 3 consecutive detections before confirming
-- 🧮 **RS Resolution**: Division-based matching (e.g., 10620 = 3 × 3540 Beryl)
-- ⚡ **WebSocket**: Real-time ore streaming to frontend
-- 🎛️ **REST API**: Configuration and control endpoints
-
-### Frontend (Tauri v2 + React)
-- 🪟 **Transparent Overlay**: Always-on-top, positioned in top-right corner
-- 🎨 **Tier Visualization**: Color-coded (S/A/B/C tiers)
-- 📡 **Auto-Reconnect**: Automatically reconnects to backend
-- ⚠️ **Volatile Warning**: Special indicator for Quantainium
-- 💰 **Market price**: shows each ore's sell price per SCU in aUEC (UEX Corp — [live table](https://hunter-36.github.io/sc-ore-scanner/))
-- 🎯 **Minimal UI**: Clean, sci-fi themed interface
+- 🦀 **Single self-contained app** — one Rust binary; OCR models embedded. No Python,
+  no separate backend, no install step (portable build).
+- 🔍 **Pure-Rust OCR** (`ocrs`) reads the bright HUD digits; no ONNX runtime, no PyTorch.
+- 🧮 **RS resolution**: division-based matching with OCR-error correction
+  (e.g. `10,620 ÷ 3,540 = 3 → 3× Beryl`).
+- 📊 **Debouncing**: a number must show for 3 consecutive frames before it's reported,
+  filtering transient misreads.
+- 🎯 **In-app calibration**: a full-screen drag-to-select overlay sets the scan region.
+- 🪟 **Transparent overlay**: always-on-top, color-coded by tier (S/A/B/C), with a
+  ⚠ marker for volatile ores (Quantainium).
+- 💰 **Market price**: each ore's sell price per SCU in aUEC (UEX Corp — [live table](https://hunter-36.github.io/sc-ore-scanner/)).
 
 ## Development (build from source)
 
-> **Players don't need this** — use the **Download & Play** section at the top of
-> this README. The rest of this guide is for building from source or contributing.
+> **Players don't need this** — use the **Download & Play** section above.
 
 ### Prerequisites
+- **Rust** (stable) — for the app and the detection core
+- **Node 18+** and [`pnpm`](https://pnpm.io/) (`corepack enable pnpm`)
+- Windows (screen capture + the Tauri build)
+- *(Optional)* [`uv`](https://github.com/astral-sh/uv) — only for `scripts/fetch_prices.py`
 
-**Backend:**
-- Python 3.11+
-- Windows (for screen capture)
-- [`uv`](https://github.com/astral-sh/uv) package manager
-
-**Frontend:**
-- Node.js 18+
-- [`pnpm`](https://pnpm.io/) package manager (`corepack enable pnpm`)
-- Rust (for Tauri)
-
-### Installation
+### Build & run
 
 ```bash
-# Clone the project
 git clone https://github.com/Hunter-36/sc-ore-scanner.git
-cd sc-ore-scanner
-
-# Install backend dependencies (full stack incl. OCR/ML)
-cd backend
-uv venv
-uv pip install -r requirements.txt
-
-# Install frontend dependencies
-cd ../frontend
+cd sc-ore-scanner/frontend
 pnpm install
+pnpm tauri dev          # run the overlay app (Rust + React)
+pnpm tauri build        # release exe + NSIS/MSI installers in src-tauri/target/release
 ```
 
-> Dependencies are split for faster installs: `requirements-core.txt` (app, no ML),
-> `requirements-ml.txt` (rapidocr-onnxruntime — the OCR engine, no PyTorch), and
-> `requirements-dev.txt` (test + lint tooling). `requirements.txt` pulls in core + OCR.
-
-### Usage
-
-#### Option 1: Use Launcher (Recommended)
-
-Double-click `launch.bat` or run:
+The detection logic lives in the `core/` crate and can be worked on independently:
 
 ```bash
-launch.bat
+cd core
+cargo test                              # unit tests + OCR accuracy e2e over real captures
+cargo run --example validate --release  # quick accuracy check on the fixtures
 ```
 
-This starts both backend and frontend automatically.
-
-#### Option 2: Manual Start
-
-**Terminal 1 - Backend:**
-```bash
-cd backend
-.venv\Scripts\python.exe calibrate.py  # First time only - select scan region
-.venv\Scripts\python.exe main.py
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
-pnpm tauri dev
-```
-
-### First-Time Calibration
-
-On first run, you need to calibrate the scan region:
-
-1. Run `python calibrate.py` in the backend folder
-2. A fullscreen overlay will appear
-3. Click and drag to select where RS numbers appear in-game
-4. Release to confirm
-
-The configuration is saved to `backend/src/config/settings.json`
+> The `ocrs` OCR models (~12 MB) are downloaded once at build time by `core/build.rs`
+> and embedded into the binary — they never enter git. The first build needs network.
 
 ## Project Structure
 
 ```
 sc-ore-scanner/
-├── backend/                  # Python FastAPI backend
+├── core/                     # scanner-core: the detection library (no UI)
 │   ├── src/
-│   │   ├── config/          # Settings management
-│   │   ├── capture/         # Screen capture + gating
-│   │   ├── ocr/             # OCR engine
-│   │   ├── resolver/        # Signature matching
-│   │   └── server/          # FastAPI + WebSocket
-│   ├── data/
-│   │   └── signatures.json  # 27 ore definitions
-│   ├── tests/
-│   │   ├── unit/            # resolver / config / ocr / server tests
-│   │   ├── e2e/             # OCR pipeline tests + manifest
-│   │   └── test_images/     # real scan captures (fixtures)
-│   ├── main.py              # Backend entry point
-│   ├── calibrate.py         # Region selector
-│   ├── pyproject.toml       # pytest + ruff config
-│   └── requirements*.txt    # core / ml / dev dependency sets
+│   │   ├── config.rs         # runtime config (scan region, interval, tuning)
+│   │   ├── preprocess.rs     # crop / upscale / CLAHE
+│   │   ├── ocr.rs            # ocrs engine (models embedded via build.rs)
+│   │   ├── pipeline.rs       # OCR -> number extraction -> resolve / aggregate
+│   │   ├── debounce.rs       # N-consecutive-frame confirmation
+│   │   ├── resolver.rs       # RS -> ore (division match + OCR-error correction)
+│   │   ├── signatures.rs     # embedded signature DB
+│   │   └── prices.rs         # UEX price feed
+│   ├── data/signatures.json  # ore signature database
+│   ├── tests/                # resolver/debounce/e2e tests
+│   │   └── fixtures/         # real scan captures
+│   └── build.rs              # fetches + embeds the ocrs models
 │
-├── frontend/                # Tauri + React frontend
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── hooks/           # WebSocket hook
-│   │   ├── store/           # Zustand state (+ vitest tests)
-│   │   └── App.tsx          # Root component
-│   ├── tests/e2e/           # Playwright overlay display tests
-│   ├── src-tauri/           # Tauri/Rust backend
-│   └── package.json         # Node dependencies (pnpm)
+├── frontend/                 # Tauri v2 + React overlay
+│   ├── src/                  # React UI (overlay, calibration, store)
+│   │   └── tests/e2e/        # Playwright display tests
+│   └── src-tauri/src/        # Rust shell: scan loop, windows, calibration, quit
 │
-├── .github/workflows/       # CI, E2E, and Release pipelines
-├── docs/                    # Architecture, testing, and CI docs
-├── launch.bat               # Windows launcher script
-└── README.md                # This file
+├── scripts/fetch_prices.py   # CI job: publish the UEX price feed to Pages
+├── .github/workflows/        # CI, E2E, Prices, Release
+└── docs/                     # architecture, testing, CI/CD, OCR pipeline
 ```
 
 ## How It Works
 
-1. **Screen Capture**: Backend captures configured screen region every 2 seconds
-2. **Scan-State Gating**: Checks if scanner HUD is active (by pixel color detection)
-3. **OCR Processing**: If scanner active, runs RapidOCR on the captured image
-4. **Preprocessing**: upscale (LANCZOS) → grayscale → CLAHE contrast + histogram normalize → a height-based component mask that strips the thousands comma, the location-pin glyph, and floating particles while keeping the digit strokes intact
-5. **Number Detection**: Extracts 3-6 digit numbers from OCR results
-6. **Debouncing**: Requires 3 consecutive frames showing same number
-7. **RS Resolution**: Divides detected number by known signatures
-   - Example: 10620 ÷ 3540 = 3 → **3x Beryl**
-8. **WebSocket Broadcast**: Sends results to frontend in real-time
-9. **UI Display**: Frontend shows ores sorted by tier and quantity
+1. A background thread captures the **primary monitor** every ~0.75s.
+2. The frame is cropped to your calibrated **scan region** and upscaled ×4 (Lanczos).
+3. `ocrs` OCRs the crop; each line is split into number tokens (so the RS value isn't
+   merged with the distance marker).
+4. Tokens that are 3–6 digit numbers in the valid RS range are kept.
+5. **Debouncing**: a number must appear in 3 consecutive frames to be confirmed.
+6. The **resolver** divides the RS number by known signatures (with OCR-error
+   correction) — e.g. `10,620 ÷ 3,540 = 3 → 3× Beryl`.
+7. Results are pushed to the React overlay via a Tauri event and shown sorted by tier.
 
 ## Testing
 
-See [`docs/testing.md`](docs/testing.md) for the full guide. Quick reference:
+See [`docs/testing.md`](docs/testing.md). Quick reference:
 
-**Backend** (from `backend/`):
+**Core** (from `core/`):
 ```bash
-uv pip install -r requirements-dev.txt   # core + test tooling (no ML)
-pytest tests/unit                         # fast unit tests (resolver, config, ocr, server)
-
-uv pip install -r requirements-ml.txt    # OCR/ML stack
-pytest tests/e2e                          # OCR pipeline over real captures
+cargo test          # resolver/debounce/extraction unit tests + OCR accuracy e2e
+cargo fmt --check && cargo clippy -- -D warnings
 ```
-
-The end-to-end suite is **manifest-driven** ([`backend/tests/e2e/manifest.json`](backend/tests/e2e/manifest.json)):
-each real capture in `backend/tests/test_images/` is cropped to its scan region, run through the
-**real** OCR + resolver pipeline **10 times**, and must produce the expected ore as the
-top match in **≥90%** of runs. To add a case, drop an image (or video) in `test_images/` and add a
-manifest entry. You can also run the pipeline on any file directly:
-
-```bash
-python -m tests.e2e.pipeline tests/test_images/sc_mining_scan_rs_10620_some_particles.png
-```
+The e2e ([`core/tests/e2e.rs`](core/tests/e2e.rs)) crops each real capture in
+`core/tests/fixtures/` to its scan region, runs the **real embedded OCR + resolver**,
+and asserts the expected top ore. Add a case by dropping a PNG in `fixtures/` and
+adding an assertion.
 
 **Frontend** (from `frontend/`):
 ```bash
 pnpm test          # vitest unit tests (store logic)
 pnpm typecheck     # tsc --noEmit
-pnpm test:e2e      # Playwright overlay display tests (mock backend WebSocket)
+pnpm test:e2e      # Playwright overlay + calibration tests
 ```
 
 ## CI/CD
 
-GitHub Actions runs three pipelines (see [`docs/ci-cd.md`](docs/ci-cd.md)):
+GitHub Actions (see [`docs/ci-cd.md`](docs/ci-cd.md)):
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| **CI** (`ci.yml`) | push / PR | ruff + backend unit tests, frontend typecheck + vitest, Tauri `cargo check` |
-| **E2E** (`e2e.yml`) | push / PR | OCR pipeline over real captures (RapidOCR), Playwright overlay tests |
-| **Release** (`release.yml`) | tag `v*` | builds the Windows installer and drafts a GitHub Release |
+| **CI** (`ci.yml`) | push / PR | `cargo fmt`/`clippy`/`test` (core, incl. OCR e2e), frontend typecheck + vitest, Tauri `cargo check`, version-consistency |
+| **E2E** (`e2e.yml`) | push / PR | Playwright overlay display tests |
+| **Prices** (`prices.yml`) | hourly cron | refresh the UEX price feed published to GitHub Pages |
+| **Release** (`release.yml`) | merge to `master` with a new version | builds the app + NSIS/MSI installers and publishes a GitHub Release |
 
-Cutting a release:
-```bash
-git tag v1.0.1
-git push origin v1.0.1   # -> builds .msi/.exe and drafts a Release
-```
+Releasing: bump the version in `frontend/package.json`, `frontend/src-tauri/tauri.conf.json`,
+and `frontend/src-tauri/Cargo.toml` (they must agree) in a PR; merging to `master`
+auto-tags and publishes.
 
 ## Configuration
 
-### Backend Settings
-
-Edit `backend/src/config/settings.json`:
-
-```json
-{
-  "scan_interval": 2.0,
-  "ocr": {
-    "confidence_threshold": 0.5,
-    "min_consecutive_frames": 3,
-    "upscale_factor": 4
-  },
-  "scan_gating": {
-    "enabled": true
-  },
-  "signature": {
-    "max_error_margin": 50,
-    "error_margin_percent": 0.01
-  }
-}
-```
-
-### Frontend Window
-
-Edit `frontend/src-tauri/tauri.conf.json`:
+Runtime config lives at `%APPDATA%\com.scorescanner.app\config.json` (created on first
+calibration):
 
 ```json
 {
-  "app": {
-    "windows": [{
-      "width": 450,
-      "height": 300,
-      "x": 1450,
-      "y": 20,
-      "alwaysOnTop": true
-    }]
-  }
+  "scan_region": [928, 376, 512, 304],
+  "scan_interval_secs": 0.75,
+  "upscale": 4,
+  "min_consecutive_frames": 3,
+  "clahe_clip_limit": 0.0,
+  "clahe_grid": [8, 8]
 }
 ```
 
-## API Reference
+- `scan_interval_secs` — how often it reads. `min_consecutive_frames` — frames to
+  confirm. Together they set how fast an ore appears (0.75 × 3 ≈ 2.25s).
+- `clahe_clip_limit` — contrast boost; `0` = off (default; ocrs reads raw text well).
+  Raise it (e.g. `2.0`) for dark/low-contrast frames.
 
-### WebSocket
-
-**Endpoint:** `ws://127.0.0.1:8765/ws`
-
-Streams real-time ore detections:
-
-```json
-{
-  "ores": {
-    "beryl": {
-      "name": "Beryl",
-      "quantity": 3,
-      "tier": "A",
-      "tier_value": 3,
-      "volatile": false,
-      "confidence": 0.95,
-      "detected_rs": 10620
-    }
-  },
-  "scanner_active": true,
-  "timestamp": 1234567890.123
-}
-```
-
-### REST Endpoints
-
-- `GET /health` - Health check
-- `GET /config` - Get configuration
-- `POST /config/scan-region` - Set scan region
-- `POST /scan/start` - Start scanning
-- `POST /scan/stop` - Stop scanning
-- `GET /monitors` - Get available monitors
-- `GET /signatures` - Get ore database
+The overlay window size/position is in `frontend/src-tauri/tauri.conf.json` (position
+is also remembered across launches in `%APPDATA%\…\.window-state.json`).
 
 ## Supported signatures
 
@@ -346,37 +222,21 @@ signature charts (31 ores + 7 asteroid types).
 
 ## Troubleshooting
 
-### Backend Issues
+**Overlay not on top of the game:** run Star Citizen in **borderless/windowed** mode
+(exclusive fullscreen can cover overlays).
 
-**OCR not working:**
-- Run: `uv pip install -r requirements-ml.txt`
-- Check logs for initialization errors
+**No detections:** click **Set region** and draw the box snugly around the RS number;
+hold on a deposit for a couple of seconds (3-frame debounce). Check
+`%APPDATA%\com.scorescanner.app\logs\scanner.log` — it logs what OCR read and what was
+detected.
 
-**No detections:**
-- Recalibrate scan region: `python calibrate.py`
-- Disable scan-state gating: `scan_gating.enabled: false`
-- Lower confidence threshold: `ocr.confidence_threshold: 0.3`
-
-### Frontend Issues
-
-**Window not showing:**
-- Check if within screen bounds
-- Verify Tauri is in dev/debug mode
-
-**WebSocket not connecting:**
-- Ensure backend running on port 8765
-- Check firewall settings
-- View console logs (Ctrl+Shift+I)
-
-**Transparent background not working:**
-- Requires Windows 10+
-- Enable GPU acceleration
+**Stuck on "Starting scanner…":** the OCR engine takes ~15–20s to warm up on first
+launch; after that it should switch to "Set your scan region."
 
 ## Performance
 
-- **Memory**: ~150MB (RapidOCR ONNX models loaded)
-- **CPU**: Low (2-second intervals)
-- **Latency**: <100ms from detection to display
+- **One process**, no IPC. OCR runs on a small cropped region, not the full screen.
+- Models embedded (~26 MB exe). Low CPU at the default scan interval.
 
 ## Roadmap
 
@@ -413,11 +273,9 @@ MIT
 ## Credits
 
 Built with:
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [RapidOCR](https://github.com/RapidAI/RapidOCR)
-- [Tauri](https://tauri.app/)
-- [React](https://react.dev/)
-- [Zustand](https://github.com/pmndrs/zustand)
+- [Tauri](https://tauri.app/) + [React](https://react.dev/) + [Zustand](https://github.com/pmndrs/zustand)
+- [ocrs](https://github.com/robertknight/ocrs) + [rten](https://github.com/robertknight/rten) — pure-Rust OCR
+- [xcap](https://github.com/nashaofu/xcap) — screen capture
 
 Mining signature data from [MrKraken](https://robertsspaceindustries.com/community-hub/user/MrKraken)'s
 Star Citizen 4.7 mining-signature charts ([YouTube @MrKraken](https://youtube.com/@MrKraken),
