@@ -22,6 +22,30 @@ pub fn crop_and_upscale(img: &RgbImage, region: Option<[u32; 4]>, scale: u32) ->
     }
 }
 
+/// Convert a `[x, y, w, h]` region of an RGBA frame buffer straight to an RGB
+/// image, copying **only the region's pixels** (not the whole frame). `region` is
+/// clamped to the frame bounds. This keeps screen capture cheap: a 4K grab is
+/// ~33 MB, but the scan region is a few thousand pixels.
+pub fn crop_rgba_to_rgb(raw: &[u8], full_w: u32, full_h: u32, region: [u32; 4]) -> RgbImage {
+    let [rx, ry, rw, rh] = region;
+    let x0 = rx.min(full_w);
+    let y0 = ry.min(full_h);
+    let w = rw.min(full_w - x0);
+    let h = rh.min(full_h - y0);
+    if w == 0 || h == 0 {
+        return RgbImage::new(1, 1);
+    }
+    let mut rgb = RgbImage::new(w, h);
+    for yy in 0..h {
+        let row = ((y0 + yy) as usize * full_w as usize + x0 as usize) * 4;
+        for xx in 0..w {
+            let o = row + xx as usize * 4;
+            rgb.put_pixel(xx, yy, image::Rgb([raw[o], raw[o + 1], raw[o + 2]]));
+        }
+    }
+    rgb
+}
+
 /// Full OCR preprocessing: crop -> upscale -> grayscale -> CLAHE -> back to RGB
 /// (ocrs wants RGB bytes). Mirrors the Python `preprocess_image`.
 pub fn preprocess_for_ocr(
@@ -148,4 +172,33 @@ pub fn clahe(gray: &GrayImage, tiles_x: u32, tiles_y: u32, clip_limit: f32) -> G
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::crop_rgba_to_rgb;
+
+    #[test]
+    fn crops_region_from_rgba_buffer() {
+        // 3x2 RGBA frame; pixel R = (y*3 + x) * 10, G=1, B=2, A=255.
+        let (full_w, full_h) = (3u32, 2u32);
+        let mut raw = Vec::new();
+        for i in 0..(full_w * full_h) {
+            raw.extend_from_slice(&[(i as u8) * 10, 1, 2, 255]);
+        }
+        let img = crop_rgba_to_rgb(&raw, full_w, full_h, [1, 0, 2, 2]);
+        assert_eq!(img.dimensions(), (2, 2));
+        assert_eq!(img.get_pixel(0, 0).0, [10, 1, 2]); // idx 1
+        assert_eq!(img.get_pixel(1, 0).0, [20, 1, 2]); // idx 2
+        assert_eq!(img.get_pixel(0, 1).0, [40, 1, 2]); // idx 4
+        assert_eq!(img.get_pixel(1, 1).0, [50, 1, 2]); // idx 5
+    }
+
+    #[test]
+    fn clamps_out_of_bounds_region() {
+        let raw = vec![9u8, 9, 9, 255]; // 1x1
+        let img = crop_rgba_to_rgb(&raw, 1, 1, [0, 0, 100, 100]);
+        assert_eq!(img.dimensions(), (1, 1));
+        assert_eq!(img.get_pixel(0, 0).0, [9, 9, 9]);
+    }
 }

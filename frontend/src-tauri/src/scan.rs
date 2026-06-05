@@ -48,9 +48,10 @@ struct ScanResult {
     configured: bool,
 }
 
-/// Capture the primary monitor as an RGB image (alpha dropped). Targets the
-/// primary monitor explicitly so it matches the calibration overlay's coords.
-pub fn capture_primary() -> anyhow::Result<image::RgbImage> {
+/// Capture the calibrated `region` of the primary monitor as RGB. The full frame
+/// is grabbed (xcap), but only the region's pixels are converted to RGB — a 4K
+/// grab is ~33 MB while the scan region is a few thousand pixels.
+pub fn capture_region(region: [u32; 4]) -> anyhow::Result<image::RgbImage> {
     let monitors = xcap::Monitor::all()?;
     let monitor = monitors
         .iter()
@@ -58,14 +59,13 @@ pub fn capture_primary() -> anyhow::Result<image::RgbImage> {
         .or_else(|| monitors.first())
         .ok_or_else(|| anyhow::anyhow!("no monitor found"))?;
     let rgba = monitor.capture_image()?;
-    let (w, h) = (rgba.width(), rgba.height());
-    let raw = rgba.into_raw();
-    let mut rgb = image::RgbImage::new(w, h);
-    for (i, px) in rgb.pixels_mut().enumerate() {
-        let o = i * 4;
-        *px = image::Rgb([raw[o], raw[o + 1], raw[o + 2]]);
-    }
-    Ok(rgb)
+    let (fw, fh) = (rgba.width(), rgba.height());
+    Ok(scanner_core::preprocess::crop_rgba_to_rgb(
+        rgba.as_raw(),
+        fw,
+        fh,
+        region,
+    ))
 }
 
 /// Spawn the scan loop on a background thread. It reads the scan region from the
@@ -141,11 +141,12 @@ pub fn start(app: AppHandle) {
                         },
                     );
                 }
-                Some(region) => match capture_primary() {
+                Some(region) => match capture_region(region) {
                     Ok(img) => {
+                        // Already cropped to the region, so just upscale (+CLAHE).
                         let processed = preprocess_for_ocr(
                             &img,
-                            Some(region),
+                            None,
                             cfg.upscale,
                             cfg.clahe_clip_limit,
                             cfg.clahe_grid,
