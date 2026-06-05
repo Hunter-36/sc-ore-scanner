@@ -99,6 +99,51 @@ fn quit() {
     std::process::exit(0);
 }
 
+fn config_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    Ok(app
+        .path()
+        .app_config_dir()
+        .map_err(|e| e.to_string())?
+        .join("config.json"))
+}
+
+/// Return the current runtime config for the settings UI.
+#[tauri::command]
+fn get_config(app: AppHandle) -> Result<scanner_core::config::Config, String> {
+    Ok(scanner_core::config::Config::load(&config_path(&app)?))
+}
+
+/// The tunable subset the settings UI can change (snake_case to match serde, so
+/// the JS side passes the same field names — no camelCase ambiguity).
+#[derive(serde::Deserialize)]
+struct SettingsUpdate {
+    scan_interval_secs: f64,
+    min_consecutive_frames: u32,
+    upscale: u32,
+    clahe_clip_limit: f64,
+}
+
+/// Update the tunable detection settings, clamped to sane ranges, preserving the
+/// scan region. The scan loop hot-reloads config each cycle, so changes apply live.
+#[tauri::command]
+fn set_config(app: AppHandle, update: SettingsUpdate) -> Result<(), String> {
+    let path = config_path(&app)?;
+    let mut cfg = scanner_core::config::Config::load(&path);
+    cfg.scan_interval_secs = update.scan_interval_secs.clamp(0.3, 5.0);
+    cfg.min_consecutive_frames = update.min_consecutive_frames.clamp(1, 6);
+    cfg.upscale = update.upscale.clamp(1, 6);
+    cfg.clahe_clip_limit = update.clahe_clip_limit.clamp(0.0, 8.0);
+    cfg.save(&path).map_err(|e| e.to_string())?;
+    log::info!(
+        "settings updated: interval={:.2}s frames={} upscale={} clahe={:.1}",
+        cfg.scan_interval_secs,
+        cfg.min_consecutive_frames,
+        cfg.upscale,
+        cfg.clahe_clip_limit
+    );
+    Ok(())
+}
+
 /// Directory for the log file: `%APPDATA%\com.scorescanner.app\logs` (matches the
 /// Tauri app_config_dir on Windows), so logging works even when the app is
 /// installed read-only under Program Files. Falls back to next to the exe.
@@ -188,7 +233,13 @@ fn main() {
             scan::start(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![open_calibration, save_scan_region, quit])
+        .invoke_handler(tauri::generate_handler![
+            open_calibration,
+            save_scan_region,
+            get_config,
+            set_config,
+            quit
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

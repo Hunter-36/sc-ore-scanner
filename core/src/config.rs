@@ -71,6 +71,15 @@ impl Config {
             std::fs::create_dir_all(parent)?;
         }
         let json = serde_json::to_string_pretty(self).map_err(std::io::Error::other)?;
-        std::fs::write(path, json)
+        // Write to a temp file then rename, so a concurrent reader (the scan loop
+        // re-reads config every cycle) never sees a half-written file and falls
+        // back to defaults — which would briefly drop the scan region. The temp
+        // name is unique per write (pid + counter) so rapid concurrent saves from
+        // the settings UI never collide on the same temp file.
+        static SAVE_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let seq = SAVE_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let tmp = path.with_extension(format!("{}.{seq}.tmp", std::process::id()));
+        std::fs::write(&tmp, json)?;
+        std::fs::rename(&tmp, path)
     }
 }
