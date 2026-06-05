@@ -4,8 +4,8 @@ import { useOreStore, ScanResult } from './useOreStore';
 const initialState = {
   ores: {},
   scannerActive: false,
+  configured: false,
   connected: false,
-  lastUpdate: 0,
 };
 
 const sampleScan: ScanResult = {
@@ -21,8 +21,6 @@ const sampleScan: ScanResult = {
     },
   },
   scanner_active: true,
-  timestamp: 123,
-  session: { distinct_ores: 1, total_detections: 4 },
 };
 
 describe('useOreStore', () => {
@@ -37,24 +35,14 @@ describe('useOreStore', () => {
     expect(s.connected).toBe(false);
   });
 
-  it('updateFromScan applies ores, scanner state, and timestamp', () => {
+  it('updateFromScan applies ores and scanner state', () => {
     useOreStore.getState().updateFromScan(sampleScan);
     const s = useOreStore.getState();
     expect(Object.keys(s.ores)).toEqual(['beryl']);
     expect(s.ores.beryl.quantity).toBe(3);
     expect(s.ores.beryl.name).toBe('Beryl');
     expect(s.scannerActive).toBe(true);
-    expect(s.lastUpdate).toBe(123);
-    expect(s.session.total_detections).toBe(4);
-    expect(s.session.distinct_ores).toBe(1);
-  });
-
-  it('clear wipes ores and deactivates the scanner', () => {
-    useOreStore.getState().updateFromScan(sampleScan);
-    useOreStore.getState().clear();
-    const s = useOreStore.getState();
-    expect(s.ores).toEqual({});
-    expect(s.scannerActive).toBe(false);
+    expect(s.configured).toBe(true);
   });
 
   it('setConnected toggles the connection flag', () => {

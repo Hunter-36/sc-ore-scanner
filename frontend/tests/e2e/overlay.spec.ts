@@ -23,8 +23,6 @@ type ScanResult = {
   ores: Record<string, Ore>;
   scanner_active: boolean;
   configured?: boolean;
-  timestamp: number;
-  session?: { distinct_ores: number; total_detections: number };
 };
 
 async function emitScan(page: Page, result: ScanResult) {
@@ -75,7 +73,7 @@ test('header exposes the calibrate and close buttons', async ({ page }) => {
 });
 
 test('prompts to set a scan region when none is configured', async ({ page }) => {
-  await emitScan(page, { ores: {}, scanner_active: false, configured: false, timestamp: 1 });
+  await emitScan(page, { ores: {}, scanner_active: false, configured: false });
   await expect(page.locator('.message')).toContainText('Set your scan region');
   await expect(page.locator('.message')).toContainText('Set region');
 });
@@ -90,8 +88,6 @@ test('renders ore cards from a scan, sorted by tier, with prices', async ({ page
   await emitScan(page, {
     ores: { quantainium: QUANTANIUM, beryl: BERYL },
     scanner_active: true,
-    timestamp: 1,
-    session: { distinct_ores: 2, total_detections: 5 },
   });
 
   await expect(page.locator('.status-text')).toHaveText('SCANNING');
@@ -106,16 +102,12 @@ test('renders ore cards from a scan, sorted by tier, with prices', async ({ page
 
   await expect(cards.nth(0).locator('.ore-quantity')).toContainText('2x');
   await expect(cards.nth(1)).toContainText('≈ 40 aUEC/SCU');
-
-  await expect(page.locator('.session-footer')).toContainText('5 detections');
-  await expect(page.locator('.session-footer')).toContainText('2 types');
 });
 
 test('shows volatile and low-confidence badges appropriately', async ({ page }) => {
   await emitScan(page, {
     ores: { quantainium: QUANTANIUM, beryl: BERYL },
     scanner_active: true,
-    timestamp: 1,
   });
 
   // Quantanium is volatile (⚠) and high-confidence (no % badge).
@@ -133,14 +125,10 @@ test('shows "no ores" when scanning but nothing detected', async ({ page }) => {
   await emitScan(page, {
     ores: {},
     scanner_active: true,
-    timestamp: 1,
-    session: { distinct_ores: 0, total_detections: 0 },
   });
 
   await expect(page.locator('.status-text')).toHaveText('SCANNING');
   await expect(page.locator('.message')).toContainText('No ores detected');
-  // No detections yet -> no session footer.
-  await expect(page.locator('.session-footer')).toHaveCount(0);
 });
 
 test('shows the alternative reading for an ambiguous signature', async ({ page }) => {
@@ -159,7 +147,6 @@ test('shows the alternative reading for an ambiguous signature', async ({ page }
       },
     },
     scanner_active: true,
-    timestamp: 1,
   });
   const card = page.locator('.ore-card', { hasText: 'Savrilium' });
   await expect(card.locator('.ore-alt')).toContainText('5x Aslarite');
@@ -169,7 +156,6 @@ test('omits the price line when an ore has no known price', async ({ page }) => 
   await emitScan(page, {
     ores: { beryl: { ...BERYL, unit_price: null } },
     scanner_active: true,
-    timestamp: 1,
   });
   const beryl = page.locator('.ore-card', { hasText: 'Beryl' });
   await expect(beryl).toBeVisible();
