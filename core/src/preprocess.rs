@@ -42,7 +42,12 @@ pub fn preprocess_for_ocr(
     }
 
     let gray = image::DynamicImage::ImageRgb8(upscaled).into_luma8();
-    let eq = clahe(&gray, clahe_grid[0].max(1), clahe_grid[1].max(1), clahe_clip_limit as f32);
+    let eq = clahe(
+        &gray,
+        clahe_grid[0].max(1),
+        clahe_grid[1].max(1),
+        clahe_clip_limit as f32,
+    );
 
     let (w, h) = eq.dimensions();
     let mut rgb = RgbImage::new(w, h);
@@ -111,7 +116,9 @@ pub fn clahe(gray: &GrayImage, tiles_x: u32, tiles_y: u32, clip_limit: f32) -> G
             let mut cdf = 0u32;
             for i in 0..256 {
                 cdf += hist[i];
-                lut[i] = ((cdf as f32 / count as f32) * 255.0).round().clamp(0.0, 255.0) as u8;
+                lut[i] = ((cdf as f32 / count as f32) * 255.0)
+                    .round()
+                    .clamp(0.0, 255.0) as u8;
             }
         }
     }

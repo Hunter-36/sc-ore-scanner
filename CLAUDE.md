@@ -4,100 +4,121 @@ Guidance for working in this repository with Claude Code.
 
 ## What this is
 
-SC Ore Scanner: a real-time Star Citizen mining overlay. A **Python/FastAPI
-backend** captures the screen, OCRs the mining scanner's RS (Radar Signature)
-number, and resolves it to an ore type + quantity; a **Tauri v2 + React overlay**
-displays it. They communicate over a local WebSocket (`ws://127.0.0.1:8765/ws`).
+SC Ore Scanner: a real-time Star Citizen mining overlay, shipped as a **single
+self-contained Rust app** (Tauri v2). It captures the screen in-process, OCRs the
+mining scanner's **RS** (Radar Signature) number with the pure-Rust `ocrs` engine,
+resolves it to an ore type + quantity, and shows it in a React overlay. The scan
+loop runs on a background thread and pushes results to the UI via a **Tauri event**
+(`scan-result`) — there is no Python backend and no WebSocket.
 
 Read [`docs/architecture.md`](docs/architecture.md) for the full picture.
 
+> v1 was a Python/FastAPI backend + Tauri frontend over a WebSocket. v2.0.0 was an
+> all-Rust rewrite (single binary). If you find references to Python/WebSocket
+> anywhere, they're stale — fix them.
+
+## Layout
+
+- **`core/`** — `scanner-core`, the detection library (no UI). Modules: `config`,
+  `preprocess` (crop/upscale/CLAHE), `ocr` (ocrs, models embedded via `build.rs`),
+  `pipeline` (OCR → number extraction → resolve/aggregate), `debounce`, `resolver`
+  (RS → ore, division match + OCR-error correction), `signatures` (embedded
+  `core/data/signatures.json`), `prices` (UEX feed). Tests in `core/tests/`,
+  fixtures in `core/tests/fixtures/`.
+- **`frontend/`** — Tauri v2 app. `src/` is the React overlay; `src-tauri/src/`
+  is the Rust shell: `scan.rs` (capture → detect → emit loop) and `main.rs`
+  (windows, calibration, quit, logging). Depends on `scanner-core` by path.
+- **`scripts/fetch_prices.py`** — the only Python left: a CI data job that fetches
+  the UEX feed and publishes `prices.json` to GitHub Pages (see `prices.yml`). Not
+  part of the app.
+
 ## Toolchain
 
-- **Python: use `uv`** (not pip/venv directly). `uv venv`, `uv pip install -r ...`, `uv run`.
-- **Node: use `pnpm`** (not npm). The repo is migrated to pnpm with a committed `pnpm-lock.yaml`.
-- Python 3.11+. Node 18+. Rust stable for Tauri.
+- **Rust stable** for everything. On **this Windows machine, run cargo under
+  `vcvars64`** (the MSVC linker isn't otherwise on PATH) — see the vcvars memory.
+- **Node: use `pnpm`** (not npm). Committed `pnpm-lock.yaml`.
+- **Python: use `uv`** — only needed for `scripts/fetch_prices.py`.
 
 ## Common commands
 
-Backend (from `backend/`):
-```bash
-uv pip install -r requirements-dev.txt   # unit-test tooling (no ML)
-uv pip install -r requirements.txt       # full app (adds RapidOCR; no PyTorch)
-pytest tests/unit                         # fast unit tests
-pytest tests/e2e                          # OCR pipeline e2e (needs ML stack)
-ruff check .
-python main.py                            # run backend (needs a calibrated scan region)
-python calibrate.py                       # select the scan region
-```
-
-Frontend (from `frontend/`):
+Frontend / app (from `frontend/`):
 ```bash
 pnpm install
-pnpm tauri dev      # run the overlay (expects backend on :8765)
-pnpm test           # vitest unit tests
+pnpm tauri dev          # run the overlay app (Rust + React)
+pnpm tauri build        # release exe + NSIS/MSI installers in src-tauri/target/release
 pnpm typecheck
-pnpm test:e2e       # Playwright overlay display tests
-pnpm build          # tsc + vite build (what the release pipeline runs)
+pnpm test               # vitest (store)
+pnpm test:e2e           # Playwright overlay display tests
 ```
 
-Launch both at once (Windows): `launch.bat`.
+Core detection (from `core/`):
+```bash
+cargo test                              # resolver/debounce/extraction unit + OCR accuracy e2e
+cargo run --example validate --release  # accuracy check over the capture fixtures
+cargo fmt --check && cargo clippy -- -D warnings
+```
 
-## Dependency layout
+(Local Windows builds: prefix with the vcvars64 shell — see the memory.)
 
-`requirements-core.txt` (app, no OCR) · `requirements-ml.txt` (rapidocr-onnxruntime) ·
-`requirements-dev.txt` (core + pytest/ruff/httpx) · `requirements.txt` (core + ml).
-Keep the split intact — it's what makes unit-test CI fast. Pytest + ruff config
-live in `backend/pyproject.toml`.
+## Detection pipeline (faithful to v1)
+
+capture primary monitor → crop to `scan_region` → upscale ×4 (Lanczos) →
+*(CLAHE contrast, opt-in)* → `ocrs` OCR → extract each number token from each line
+→ keep 3–6 digit numbers in `valid_rs_min..max` → **debounce: confirm after
+`min_consecutive_frames` (3)** → resolver (division match + OCR-error correction)
+→ aggregate best-per-ore → emit `scan-result`.
 
 ## Testing model
 
-- **Backend unit** (`tests/unit/`): resolver, config, OCR preprocessing/debounce, FastAPI.
-- **Backend e2e** (`tests/e2e/`): manifest-driven — crops real captures to a scan
-  region, runs the real OCR+resolver **10×**, requires the expected ore as top match
-  in **≥90%** of runs. Add cases via `tests/e2e/manifest.json` + a file in
-  `tests/test_images/`.
-- **Frontend**: vitest for the store; Playwright for the overlay display (mock WS).
-
-See [`docs/testing.md`](docs/testing.md).
+- **Core unit** (`core/src/**` `#[cfg(test)]` + `core/tests/resolver.rs`): resolver,
+  debounce, number extraction.
+- **Core e2e** (`core/tests/e2e.rs`): crops real captures in `core/tests/fixtures/`
+  to the scan region, runs the **real embedded OCR + resolver**, asserts the
+  expected top ore. Add cases by dropping a PNG in `fixtures/` + an assertion.
+- **Frontend**: vitest for the store; Playwright for the overlay (drives the real
+  store via a dev-only `mock-scan` event, and the calibration UI via `?calibrate`).
 
 ## Gotchas
 
-- **mss needs a display.** `tests/unit/test_server.py` opens the FastAPI lifespan
-  which constructs `mss`. On headless Linux run under `xvfb-run`; on Windows/macOS
-  it just works. CI handles this.
-- **OCR preprocessing is contrast-based, not threshold-based.** The aggressive
-  adaptive-threshold approach destroyed digit strokes and broke detection on real
-  captures. Don't reintroduce it. See [`docs/ocr-pipeline.md`](docs/ocr-pipeline.md).
-- **cv2 LANCZOS4 (not PIL) for upscaling** — PIL flipped a borderline `6`→`8`.
-- **Tauri icons are committed** under `frontend/src-tauri/icons/` (the build needs
-  them). Regenerate with `pnpm tauri icon <1024² source>.png`.
-- **Settings:** runtime config is `backend/src/config/settings.json` (scan region,
-  thresholds). Env overrides via `SC_SCANNER_*`. Tests use temp files — never write
-  the real settings.json from a test.
+- **Window creation must be async.** A synchronous Tauri command that builds a
+  window deadlocks the main thread (window appears but nothing else works). Any
+  command that opens a window must be `async fn`. See the matching memory.
+- **ocrs exposes no per-line confidence** (only chars + rects), so v1's confidence
+  gate can't be ported; **debouncing** covers it.
+- **ocrs returns whole lines**, merging the RS value with the distance marker
+  (`"0 7,080 18.8km"`). `pipeline::extract_numbers` splits each line into number
+  tokens so the RS value is isolated. Don't revert to whole-line digit-stripping.
+- **CLAHE is off by default.** It's implemented (matches cv2) but *regressed* ocrs
+  detection at v1's clip=2.0, so `clahe_clip_limit` defaults to 0 (off). ocrs reads
+  the raw upscaled text well; CLAHE is tunable for dark frames.
+- **OCR preprocessing is contrast-based, not threshold-based** — aggressive
+  thresholding destroyed digit strokes in v1. Don't reintroduce it.
+- **Models are embedded**: `core/build.rs` downloads the ocrs `.rten` models at
+  build time into `OUT_DIR` and `include_bytes!`s them. First build needs network;
+  models never enter git.
+- **Tauri icons are committed** under `frontend/src-tauri/icons/`.
+- **Runtime data** lives in `%APPDATA%\com.scorescanner.app\`: `config.json`
+  (scan region + tuning), `.window-state.json`, `logs/scanner.log`.
 
 ## Conventions
 
-- Match the surrounding style: type hints + docstrings in the backend, functional
-  React components, Pydantic models for data shapes.
-- When changing detection (OCR/resolver) behavior, validate with `pytest tests/e2e`
-  and, if it changes accuracy, update/extend the e2e manifest fixtures.
+- Match surrounding style: functional React components; small, documented Rust
+  modules; `serde` structs for data shapes.
+- When changing detection (OCR/resolver/preprocess) behaviour, validate with
+  `cargo test` (the e2e accuracy test) and extend the fixtures if accuracy changes.
 
 ## Workflow: issues → PR → auto-release
 
-- **Work from a GitHub issue, on a branch, via a PR into `master`** — not straight commits to master.
-- **Merging to `master` auto-tags and publishes a release** (`.github/workflows/release.yml`)
-  when the version in `frontend/package.json` has no release yet; it's a no-op if the
-  version is unchanged. So the version bump must land **in the PR**, before merge.
-- **Conventional Commits** — format `type(scope): summary`. Common types:
-  `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`. Use `!` (e.g.
-  `feat!:`) or a `BREAKING CHANGE:` footer for breaking changes.
-- **SemVer bump** (decide from the change; CI's `versions` job enforces consistency):
-  - `fix`/`docs`/`chore`/`refactor`/security → **patch** (`x.y.Z`)
-  - `feat` (backward-compatible) → **minor** (`x.Y.0`)
-  - breaking change → **major** (`X.0.0`)
-- **Bump the version in all 5 places** (CI checks the first three agree):
-  `frontend/package.json`, `frontend/src-tauri/tauri.conf.json`,
-  `frontend/src-tauri/Cargo.toml`, `backend/main.py` (`Version:` log), and
-  `backend/src/server/app.py` (`FastAPI(version=...)`).
-- Tests must pass before merge (backend `pytest`, frontend `pnpm typecheck && pnpm test`).
-  See [`docs/ci-cd.md`](docs/ci-cd.md) for the full release flow.
+- **Work from a GitHub issue, on a branch, via a PR into `master`** — not straight
+  commits to master.
+- **Merging to `master` auto-tags and publishes a release** (`release.yml`) when the
+  version in `frontend/package.json` has no release yet; a no-op if unchanged. So
+  the version bump must land **in the PR**.
+- **Conventional Commits** — `type(scope): summary` (`feat`, `fix`, `docs`,
+  `refactor`, `test`, `chore`, `ci`, `perf`; `!`/`BREAKING CHANGE:` for breaking).
+- **SemVer**: `fix`/`docs`/`chore`/`refactor` → patch; `feat` → minor; breaking →
+  major. CI's `versions` job enforces consistency.
+- **Bump the version in all 3 places** (they must agree): `frontend/package.json`,
+  `frontend/src-tauri/tauri.conf.json`, `frontend/src-tauri/Cargo.toml`.
+- Tests must pass before merge (`cargo test`, `pnpm typecheck && pnpm test`, Playwright).
+  See [`docs/ci-cd.md`](docs/ci-cd.md).

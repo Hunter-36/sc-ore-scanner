@@ -7,15 +7,21 @@ use std::path::Path;
 use scanner_core::{ocr::Ocr, pipeline::detect_ores, resolver::Resolver};
 
 fn main() -> anyhow::Result<()> {
-    let img_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../backend/tests/test_images");
+    let img_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
 
     let ocr = Ocr::new()?;
     let resolver = Resolver::new();
     let region = Some([193u32, 122, 109, 48]);
 
     let cases: [(&str, Option<(&str, i64)>); 3] = [
-        ("sc_mining_scan_rs_10620_some_particles.png", Some(("Beryl", 3))),
-        ("sc_mining_scan_rs_7080_some_particles_and_other_marker_not_rs.png", Some(("Beryl", 2))),
+        (
+            "sc_mining_scan_rs_10620_some_particles.png",
+            Some(("Beryl", 3)),
+        ),
+        (
+            "sc_mining_scan_rs_7080_some_particles_and_other_marker_not_rs.png",
+            Some(("Beryl", 2)),
+        ),
         ("sc_mining_scan_no_rs.png", None),
     ];
 

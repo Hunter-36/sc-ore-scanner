@@ -6,7 +6,10 @@ use scanner_core::Resolver;
 fn signatures_loaded() {
     let r = Resolver::new();
     assert_eq!(r.signatures().len(), 38);
-    assert!(r.signatures().iter().any(|o| o.id == "beryl" && o.base_rs == 3540));
+    assert!(r
+        .signatures()
+        .iter()
+        .any(|o| o.id == "beryl" && o.base_rs == 3540));
 }
 
 #[test]
@@ -19,16 +22,21 @@ fn exact_division_top_match() {
         (17140, "Aluminium", 4),
         (3540, "Beryl", 1),
         (6340, "Quantainium", 2),
-        (3840, "Aslarite", 1),     // 4.7 ore (clustered near Laranite 3825)
+        (3840, "Aslarite", 1), // 4.7 ore (clustered near Laranite 3825)
         (4700, "C-Type Asteroid", 1),
         (4900, "E-Type Asteroid", 1),
     ];
     for (rs, name, qty) in cases {
         let matches = r.resolve(rs, 1.0);
-        let top = matches.first().unwrap_or_else(|| panic!("expected a match for {rs}"));
+        let top = matches
+            .first()
+            .unwrap_or_else(|| panic!("expected a match for {rs}"));
         assert_eq!(top.ore.name, name, "rs {rs} ore");
         assert_eq!(top.quantity, qty, "rs {rs} qty");
-        assert!((top.confidence - 1.0).abs() < 1e-9, "rs {rs} should be exact (conf 1.0)");
+        assert!(
+            (top.confidence - 1.0).abs() < 1e-9,
+            "rs {rs} should be exact (conf 1.0)"
+        );
         assert_eq!(top.error_margin, 0, "rs {rs} exact -> no error");
     }
 }

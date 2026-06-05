@@ -18,20 +18,22 @@ small.
 
 ## Dev setup
 
-This project uses **[uv](https://github.com/astral-sh/uv)** for Python and
-**[pnpm](https://pnpm.io/)** for the frontend.
+All Rust, with **[pnpm](https://pnpm.io/)** for the frontend.
 
 ```bash
-# Backend
-cd backend
-uv venv
-uv pip install -r requirements-dev.txt    # core + test tooling
-uv pip install -r requirements-ml.txt     # OCR engine (for e2e)
-
-# Frontend
-cd ../frontend
+cd frontend
 pnpm install
+pnpm tauri dev        # run the app (Rust + React)
 ```
+
+The detection logic is the `core/` crate (no UI) and can be worked on alone:
+
+```bash
+cd core
+cargo test            # unit + OCR accuracy e2e (build.rs fetches the OCR models)
+```
+
+On **Windows, run cargo under `vcvars64`** so the MSVC linker is on PATH.
 
 See [`CLAUDE.md`](CLAUDE.md) and [`docs/`](docs/) (architecture, OCR pipeline,
 testing, CI/CD) for how everything fits together.
@@ -40,11 +42,11 @@ testing, CI/CD) for how everything fits together.
 
 All of these must pass — CI enforces them:
 
-**Backend** (from `backend/`):
+**Core** (from `core/`):
 ```bash
-ruff check .
-pytest tests/unit          # fast, no OCR deps
-pytest tests/e2e           # OCR pipeline (needs requirements-ml.txt)
+cargo fmt --check
+cargo clippy -- -D warnings
+cargo test                 # unit + OCR accuracy e2e
 ```
 
 **Frontend** (from `frontend/`):
@@ -56,15 +58,15 @@ pnpm test:e2e              # Playwright (pnpm exec playwright install chromium f
 
 ## Standards
 
-- **Python:** type hints + docstrings, match the existing module style. Keep `ruff`
-  clean. Pydantic models for data shapes.
+- **Rust:** small, documented modules; keep `cargo fmt` + `clippy` clean; `serde`
+  structs for data shapes.
 - **Frontend:** functional React components, TypeScript, keep `tsc` happy.
-- **Keep the dependency split** (`requirements-core` / `-ml` / `-dev`) — it's what
-  keeps unit-test CI fast.
-- **Don't reintroduce heavyweight ML deps.** OCR is intentionally RapidOCR (ONNX,
-  no PyTorch) so the app stays ~150 MB to install. The OCR preprocessing is
-  contrast-based on purpose — see [`docs/ocr-pipeline.md`](docs/ocr-pipeline.md)
-  before changing it.
+- **Don't reintroduce Python or heavyweight ML deps.** OCR is intentionally the
+  pure-Rust `ocrs` engine (models embedded). The OCR preprocessing is contrast-based,
+  and per-number extraction + debouncing are deliberate — see
+  [`docs/ocr-pipeline.md`](docs/ocr-pipeline.md) before changing it.
+- **Window-creating Tauri commands must be `async`** (a sync one deadlocks the main
+  thread).
 - **Commits:** use [Conventional Commits](https://www.conventionalcommits.org/) —
   `type(scope): summary`. Common types: `feat`, `fix`, `docs`, `refactor`, `test`,
   `chore`, `ci`, `perf`. Mark breaking changes with `!` (e.g. `feat!:`) or a
@@ -72,20 +74,17 @@ pnpm test:e2e              # Playwright (pnpm exec playwright install chromium f
 
 ## Adding ore signatures
 
-Ore data lives in [`backend/data/signatures.json`](backend/data/signatures.json).
+Ore data lives in [`core/data/signatures.json`](core/data/signatures.json).
 Add an entry with the ore's `base_rs` (single-node radar signature) and tier info,
-then add an assertion to `backend/tests/unit/test_resolver.py` so it stays correct.
+then add an assertion in `core/tests/resolver.rs` so it stays correct.
 
 ## Adding test captures
 
-The end-to-end suite is driven by
-[`backend/tests/e2e/manifest.json`](backend/tests/e2e/manifest.json). To add a
-case:
+The OCR accuracy e2e is [`core/tests/e2e.rs`](core/tests/e2e.rs). To add a case:
 
-1. Drop a screenshot (or short video) into `backend/tests/test_images/`.
-2. Add a manifest entry with its `scan_region` and `expected_top` ore.
-3. Run `pytest tests/e2e` — each capture is run **10×** and must produce the
-   expected ore as the top match in **≥90%** of runs.
+1. Drop a screenshot into `core/tests/fixtures/`.
+2. Add an assertion in `tests/e2e.rs` (the scan region + expected top ore).
+3. Run `cargo test` — it runs the real OCR + resolver over the fixture.
 
 Captures at resolutions/HUD scales other than the ones already covered are
 especially valuable, since detection has only been validated at one resolution.
@@ -101,14 +100,12 @@ This project uses [Semantic Versioning](https://semver.org/), and **merging to
 - **major** (`X.0.0`) — breaking changes (e.g. a settings format change that breaks
   existing calibration)
 
-When your change should ship, bump the version to the **same value in all five
-places** (the CI `versions` job fails if the first three disagree):
+When your change should ship, bump the version to the **same value in all three
+places** (the CI `versions` job fails if they disagree):
 
 1. `frontend/package.json`
 2. `frontend/src-tauri/tauri.conf.json`
 3. `frontend/src-tauri/Cargo.toml`
-4. `backend/main.py` (the `Version:` log line)
-5. `backend/src/server/app.py` (`FastAPI(version=...)`)
 
 Docs-only / chore PRs can leave the version unchanged — no release is cut.
 See [`docs/ci-cd.md`](docs/ci-cd.md) for the release pipeline details.

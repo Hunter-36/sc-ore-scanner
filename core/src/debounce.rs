@@ -55,8 +55,7 @@ impl Debouncer {
         self.history
             .iter()
             .filter(|(_, dq)| {
-                dq.len() >= self.min_frames
-                    && dq.iter().rev().take(self.min_frames).all(|&b| b)
+                dq.len() >= self.min_frames && dq.iter().rev().take(self.min_frames).all(|&b| b)
             })
             .map(|(&n, _)| n)
             .collect()

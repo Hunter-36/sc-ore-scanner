@@ -1,8 +1,8 @@
 name: Release
 
 # Auto-release on merge to master: if the version in package.json doesn't yet
-# have a published release, build the Windows zip, tag it, and publish. If the
-# version is unchanged (e.g. a docs/chore merge), this is a no-op.
+# have a published release, build the single-binary app + installers, tag it, and
+# publish. If the version is unchanged (e.g. a docs/chore merge), this is a no-op.
 #
 # Also fires on a manually pushed v* tag, or via the Actions "Run workflow" button.
 on:
@@ -70,30 +70,26 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: frontend
 
-      - name: Build overlay (no installer bundle)
-        run: pnpm tauri build --no-bundle
+      - name: Build app + installers (NSIS + MSI)
+        run: pnpm tauri build
         working-directory: frontend
 
-      - name: Assemble portable zip
+      - name: Collect release artifacts
         shell: pwsh
         run: |
+          $rel = "frontend/src-tauri/target/release"
+          # Portable single exe, zipped with a friendly name.
           $stage = "staging"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          Copy-Item "frontend/src-tauri/target/release/sc-ore-scanner.exe" `
-                    -Destination (Join-Path $stage "SC Ore Scanner.exe")
-          $be = Join-Path $stage "backend"
-          New-Item -ItemType Directory -Force -Path $be | Out-Null
-          Copy-Item "backend/src"  -Destination $be -Recurse
-          Copy-Item "backend/data" -Destination $be -Recurse
-          Copy-Item "backend/main.py","backend/calibrate.py" -Destination $be
-          Copy-Item "backend/requirements*.txt" -Destination $be
-          Copy-Item "packaging/setup.bat","packaging/launch.bat" -Destination $stage
-          Copy-Item "packaging/README.txt" -Destination $stage
-          Get-ChildItem -Path $be -Recurse -Directory -Filter "__pycache__" |
-            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-          $zip = "sc-ore-scanner-$($env:RELEASE_TAG)-windows.zip"
+          Copy-Item "$rel/sc-ore-scanner.exe" -Destination (Join-Path $stage "SC Ore Scanner.exe")
+          $zip = "sc-ore-scanner-$($env:RELEASE_TAG)-windows-portable.zip"
           Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -Force
           echo "ZIP_NAME=$zip" >> $env:GITHUB_ENV
+          # Installers.
+          $nsis = Get-ChildItem "$rel/bundle/nsis/*-setup.exe" | Select-Object -First 1
+          $msi  = Get-ChildItem "$rel/bundle/msi/*.msi"        | Select-Object -First 1
+          echo "NSIS_PATH=$($nsis.FullName)" >> $env:GITHUB_ENV
+          echo "MSI_PATH=$($msi.FullName)"   >> $env:GITHUB_ENV
         env:
           RELEASE_TAG: ${{ needs.check.outputs.tag }}
 
@@ -105,8 +101,11 @@ jobs:
           # The install guide is prepended to GitHub's auto-generated, categorised
           # "What's Changed" changelog (built from merged PRs since the last release;
           # see .github/release.yml for the categories).
-          body_path: packaging/RELEASE_NOTES.md
+          body_path: docs/RELEASE_NOTES.md
           generate_release_notes: true
           draft: false
           make_latest: true
-          files: ${{ env.ZIP_NAME }}
+          files: |
+            ${{ env.ZIP_NAME }}
+            ${{ env.NSIS_PATH }}
+            ${{ env.MSI_PATH }}

@@ -8,7 +8,8 @@ use rten::Model;
 
 // Fetched by build.rs into OUT_DIR, baked into the binary here.
 static DETECTION_MODEL: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/text-detection.rten"));
-static RECOGNITION_MODEL: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/text-recognition.rten"));
+static RECOGNITION_MODEL: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/text-recognition.rten"));
 
 pub struct Ocr {
     engine: OcrEngine,

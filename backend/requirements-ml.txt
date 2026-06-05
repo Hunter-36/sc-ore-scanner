@@ -1,8 +1,0 @@
-# SC Ore Scanner - OCR dependency
-# RapidOCR (ONNX runtime) does the digit recognition. It ships its models inside
-# the wheel (no runtime download) and has NO PyTorch dependency, so the install
-# footprint is ~150 MB instead of the ~2 GB an easyocr/torch stack would pull.
-#
-# Kept separate from the core deps so unit tests / lint can install a lighter set.
-
-rapidocr-onnxruntime>=1.4.0

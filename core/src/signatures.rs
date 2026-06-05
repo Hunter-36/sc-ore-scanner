@@ -22,9 +22,8 @@ struct SignaturesFile {
     ores: Vec<OreSignature>,
 }
 
-// Embed the same signatures.json the Python backend uses (single source of truth
-// for now; it moves into the crate at cutover).
-const SIGNATURES_JSON: &str = include_str!("../../backend/data/signatures.json");
+// The ore signature database (RS divisions per ore), embedded at build time.
+const SIGNATURES_JSON: &str = include_str!("../data/signatures.json");
 
 /// Load the embedded ore signatures. Panics only if the embedded JSON is invalid,
 /// which a unit test guards against.
