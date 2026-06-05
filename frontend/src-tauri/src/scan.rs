@@ -37,6 +37,8 @@ struct OreOut {
     alternatives: Vec<String>,
 }
 
+/// Emitted as the "scan-result" Tauri event. Mirrors `ScanResult` in
+/// frontend/src/store/useOreStore.ts — keep the two in sync.
 #[derive(Serialize, Clone)]
 struct ScanResult {
     ores: HashMap<String, OreOut>,
@@ -44,7 +46,6 @@ struct ScanResult {
     /// False until a scan region has been calibrated — lets the overlay prompt
     /// the user to set one instead of sitting on "Starting scanner…".
     configured: bool,
-    timestamp: f64,
 }
 
 /// Capture the primary monitor as an RGB image (alpha dropped). Targets the
@@ -137,7 +138,6 @@ pub fn start(app: AppHandle) {
                             ores: HashMap::new(),
                             scanner_active: false,
                             configured: false,
-                            timestamp: 0.0,
                         },
                     );
                 }
@@ -210,7 +210,6 @@ pub fn start(app: AppHandle) {
                                         ores,
                                         scanner_active: true,
                                         configured: true,
-                                        timestamp: 0.0,
                                     },
                                 );
                             }

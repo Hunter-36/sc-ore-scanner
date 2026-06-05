@@ -3,7 +3,7 @@ import { useScanEvents } from '../hooks/useScanEvents';
 import { OreCard } from './OreCard';
 
 export function Overlay() {
-  const { ores, scannerActive, configured, connected, session } = useOreStore();
+  const { ores, scannerActive, configured, connected } = useOreStore();
   useScanEvents();
 
   async function closeOverlay() {
@@ -124,13 +124,6 @@ export function Overlay() {
           </div>
         )}
       </div>
-
-      {/* Session footer */}
-      {connected && session.total_detections > 0 && (
-        <div className="session-footer">
-          Session: {session.total_detections} detections · {session.distinct_ores} types
-        </div>
-      )}
     </div>
   );
 }
