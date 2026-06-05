@@ -73,6 +73,12 @@ async fn open_calibration(app: AppHandle) -> Result<(), String> {
 /// preserving other settings. The scan loop re-reads config each cycle.
 #[tauri::command]
 fn save_scan_region(app: AppHandle, x: u32, y: u32, w: u32, h: u32) -> Result<(), String> {
+    // Don't trust the frontend: a zero/tiny region would make the crop empty and
+    // detection silently fail. Require a sane minimum.
+    const MIN: u32 = 8;
+    if w < MIN || h < MIN {
+        return Err(format!("scan region too small ({w}x{h}); draw a larger box"));
+    }
     let path = app
         .path()
         .app_config_dir()
