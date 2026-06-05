@@ -1,55 +1,86 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::sync::Mutex;
+
+use base64::Engine;
 use tauri::{
-    AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder,
+    AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_window_state::StateFlags;
 
 mod scan;
 
-/// Open the full-screen calibration overlay (drag-select the scan region). Re-uses
-/// the existing window if already open. Covers the primary monitor so the dragged
-/// rectangle maps 1:1 to what the scan loop captures.
+/// A screenshot of the monitor the scan loop captures, handed to the calibration
+/// window so the user draws the region on exactly what gets scanned. Captured
+/// *before* the calibration window opens so the window isn't in the shot.
+#[derive(Clone, serde::Serialize)]
+struct CaptureData {
+    width: u32,
+    height: u32,
+    #[serde(rename = "dataUrl")]
+    data_url: String,
+}
+
+struct CaptureState(Mutex<Option<CaptureData>>);
+
+fn grab_capture() -> Result<CaptureData, String> {
+    let img = scan::capture_primary().map_err(|e| e.to_string())?;
+    let (width, height) = (img.width(), img.height());
+    let mut png: Vec<u8> = Vec::new();
+    image::DynamicImage::ImageRgb8(img)
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .map_err(|e| e.to_string())?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&png);
+    Ok(CaptureData {
+        width,
+        height,
+        data_url: format!("data:image/png;base64,{b64}"),
+    })
+}
+
+/// Open the calibration window: a normal, movable, decorated window showing a
+/// screenshot of the scanned monitor. This avoids the transparent-fullscreen
+/// pitfalls (wrong monitor, can't move, blank) — the screenshot *is* the primary
+/// monitor regardless of where the window sits.
 #[tauri::command]
 fn open_calibration(app: AppHandle) -> Result<(), String> {
+    log::info!("open_calibration requested");
+
+    // Capture first, then store it, then open the window (so it isn't captured).
+    let capture = grab_capture()?;
+    log::info!("captured {}x{} for calibration", capture.width, capture.height);
+    *app.state::<CaptureState>().0.lock().unwrap() = Some(capture);
+
     if let Some(w) = app.get_webview_window("calibrate") {
         let _ = w.show();
         let _ = w.set_focus();
+        // Tell it to reload the (fresh) capture.
+        let _ = w.emit("recapture", ());
         return Ok(());
     }
 
-    // Prefer the monitor the overlay is on (reliable), then the primary monitor.
-    let monitor = app
-        .get_webview_window("main")
-        .and_then(|w| w.current_monitor().ok().flatten());
-
-    let win = WebviewWindowBuilder::new(&app, "calibrate", WebviewUrl::App("index.html".into()))
-        .title("Calibrate scan region")
-        .decorations(false)
-        .transparent(true)
-        .always_on_top(true)
-        .skip_taskbar(true)
+    WebviewWindowBuilder::new(&app, "calibrate", WebviewUrl::App("index.html".into()))
+        .title("Calibrate scan region — draw a box around the RS number")
+        .inner_size(1280.0, 820.0)
+        .min_inner_size(640.0, 480.0)
+        .center()
+        .resizable(true)
         .focused(true)
         .build()
         .map_err(|e| e.to_string())?;
-
-    match monitor.or_else(|| win.primary_monitor().ok().flatten()) {
-        Some(m) => {
-            let p = m.position();
-            let s = m.size();
-            let _ = win.set_position(PhysicalPosition::new(p.x, p.y));
-            let _ = win.set_size(PhysicalSize::new(s.width, s.height));
-        }
-        // No monitor info — at least fill the work area so it's never a tiny
-        // blank window the user can't escape.
-        None => {
-            let _ = win.maximize();
-        }
-    }
-    let _ = win.show();
-    let _ = win.set_focus();
     Ok(())
+}
+
+/// Return the stored screenshot for the calibration window to display.
+#[tauri::command]
+fn get_capture(state: State<CaptureState>) -> Result<CaptureData, String> {
+    state
+        .0
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| "no capture available".to_string())
 }
 
 /// Persist a calibrated scan region [x, y, w, h] (physical px) into config.json,
@@ -108,6 +139,7 @@ fn main() {
     log::info!("SC Ore Scanner v{} starting.", env!("CARGO_PKG_VERSION"));
 
     tauri::Builder::default()
+        .manage(CaptureState(Mutex::new(None)))
         // Remember only the overlay's POSITION across launches (not size), so the
         // window dimensions always come from the config — otherwise a stored size
         // would override height changes shipped in updates. State lives in
@@ -146,7 +178,12 @@ fn main() {
             scan::start(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![open_calibration, save_scan_region, quit])
+        .invoke_handler(tauri::generate_handler![
+            open_calibration,
+            get_capture,
+            save_scan_region,
+            quit
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

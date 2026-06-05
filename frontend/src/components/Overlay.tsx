@@ -44,14 +44,17 @@ export function Overlay() {
 
   return (
     <div className="overlay">
-      {/* Header */}
-      <div className="overlay-header" data-tauri-drag-region>
-        <div className="title">SC ORE SCANNER</div>
-        <div className="status">
-          <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`} />
-          <span className="status-text">
-            {connected ? (scannerActive ? 'SCANNING' : 'READY') : 'OFFLINE'}
-          </span>
+      {/* Header. Only the title/status area is a drag region — the buttons must
+          NOT be inside it, or Tauri's drag handler swallows their clicks. */}
+      <div className="overlay-header">
+        <div className="header-drag" data-tauri-drag-region>
+          <div className="title">SC ORE SCANNER</div>
+          <div className="status">
+            <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`} />
+            <span className="status-text">
+              {connected ? (scannerActive ? 'SCANNING' : 'READY') : 'OFFLINE'}
+            </span>
+          </div>
         </div>
         <div className="header-actions">
           <button

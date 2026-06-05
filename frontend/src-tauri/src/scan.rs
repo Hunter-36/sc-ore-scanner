@@ -44,7 +44,7 @@ struct ScanResult {
 
 /// Capture the primary monitor as an RGB image (alpha dropped). Targets the
 /// primary monitor explicitly so it matches the calibration overlay's coords.
-fn capture_primary() -> anyhow::Result<image::RgbImage> {
+pub fn capture_primary() -> anyhow::Result<image::RgbImage> {
     let monitors = xcap::Monitor::all()?;
     let monitor = monitors
         .iter()
@@ -89,16 +89,31 @@ pub fn start(app: AppHandle) {
             .app_config_dir()
             .map(|d| d.join("config.json"))
             .unwrap_or_else(|_| PathBuf::from("config.json"));
+        log::info!("Scan loop started; config at {}", config_path.display());
+
+        // Track state so we log on change instead of every cycle (no spam).
+        let mut last_region: Option<Option<[u32; 4]>> = None;
+        let mut last_summary = String::new();
 
         loop {
             let cfg = Config::load(&config_path);
             let interval = Duration::from_secs_f64(cfg.scan_interval_secs.max(0.2));
 
+            if last_region != Some(cfg.scan_region) {
+                match cfg.scan_region {
+                    Some(r) => log::info!("Scan region set to [{}, {}, {}, {}].", r[0], r[1], r[2], r[3]),
+                    None => log::info!("No scan region set — click ‘Set region’ to calibrate."),
+                }
+                last_region = Some(cfg.scan_region);
+                last_summary.clear();
+            }
+
             // Refresh prices hourly. Reset the timer even on failure so we don't
             // hammer the feed every cycle while it's down.
             if last_price_refresh.elapsed() >= PRICE_REFRESH {
-                if let Err(e) = prices.refresh() {
-                    log::warn!("price refresh failed: {e}");
+                match prices.refresh() {
+                    Ok(()) => log::info!("Refreshed prices ({} ores).", prices.len()),
+                    Err(e) => log::warn!("price refresh failed: {e}"),
                 }
                 last_price_refresh = Instant::now();
             }
@@ -121,6 +136,22 @@ pub fn start(app: AppHandle) {
                         .and_then(|img| detect_ores(&img, Some(region), cfg.upscale, &ocr, &resolver))
                     {
                         Ok(agg) => {
+                            // Log only when the detected set changes.
+                            let mut names: Vec<String> = agg
+                                .values()
+                                .map(|m| format!("{}x {} (rs {})", m.quantity, m.ore.name, m.detected_rs))
+                                .collect();
+                            names.sort();
+                            let summary = if names.is_empty() {
+                                "no ores in view".to_string()
+                            } else {
+                                names.join(", ")
+                            };
+                            if summary != last_summary {
+                                log::info!("Detected: {summary}");
+                                last_summary = summary;
+                            }
+
                             let ores: HashMap<String, OreOut> = agg
                                 .into_iter()
                                 .map(|(id, m)| {
@@ -145,7 +176,13 @@ pub fn start(app: AppHandle) {
                                 ScanResult { ores, scanner_active: true, configured: true, timestamp: 0.0 },
                             );
                         }
-                        Err(e) => log::error!("scan: {e}"),
+                        Err(e) => {
+                            let msg = format!("scan error: {e}");
+                            if msg != last_summary {
+                                log::error!("{msg}");
+                                last_summary = msg;
+                            }
+                        }
                     }
                 }
             }

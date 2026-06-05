@@ -40,8 +40,18 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: move;
+  gap: 10px;
   user-select: none;
+}
+
+.header-drag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  cursor: move;
 }
 
 .title {
@@ -127,32 +137,54 @@ body {
   background: rgba(0, 200, 255, 0.28);
 }
 
-/* Calibration overlay (second window, label "calibrate") */
+/* Calibration window (label "calibrate"): a top panel + a screenshot stage. */
 .calibrate {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(2, 10, 22, 0.55);
-  cursor: crosshair;
+  display: flex;
+  flex-direction: column;
+  background: #0a0f16;
+  color: #e6f7ff;
   overflow: hidden;
   user-select: none;
-  outline: none;
 }
 
 .calibrate-panel {
-  position: absolute;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(520px, 80vw);
-  padding: 18px 22px;
-  background: rgba(0, 30, 60, 0.92);
-  border: 1px solid rgba(0, 200, 255, 0.55);
-  border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 18px rgba(0, 200, 255, 0.25);
+  flex-shrink: 0;
+  padding: 14px 20px;
+  background: rgba(0, 30, 60, 0.95);
+  border-bottom: 1px solid rgba(0, 200, 255, 0.4);
   text-align: center;
-  cursor: default;
+}
+
+.calibrate-stage-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.calibrate-stage {
+  position: relative;
+  background: #11161c;
+  cursor: crosshair;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0, 200, 255, 0.3);
+}
+
+.calibrate-shot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.calibrate-error {
+  font-size: 15px;
+  color: #cfe6f5;
 }
 
 .calibrate-title {
@@ -221,7 +253,7 @@ body {
   position: absolute;
   border: 2px solid #2da8ff;
   background: rgba(45, 168, 255, 0.18);
-  box-shadow: 0 0 0 9999px rgba(2, 10, 22, 0.25), 0 0 14px rgba(45, 168, 255, 0.75),
+  box-shadow: 0 0 0 9999px rgba(2, 10, 22, 0.5), 0 0 14px rgba(45, 168, 255, 0.85),
     inset 0 0 12px rgba(45, 168, 255, 0.35);
   cursor: move;
 }
