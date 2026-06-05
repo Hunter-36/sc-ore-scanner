@@ -222,4 +222,22 @@ mod tests {
         assert_eq!((det.ore.name.as_str(), det.quantity), ("Beryl", 3));
         assert!(det.alternatives.is_empty());
     }
+
+    #[test]
+    fn clustered_values_do_not_leak_fuzzy_neighbours() {
+        // Beryl 3540 / Taranite 3555 / Borase 3570 sit within each other's fuzzy
+        // margin (~35), but an exact reading must surface ONLY itself — no fuzzy
+        // neighbour leaking as its own card or as an "alternative" (issue #11).
+        let r = crate::resolver::Resolver::new();
+        for (rs, name) in [(3540, "Beryl"), (3555, "Taranite"), (3570, "Borase")] {
+            let agg = super::resolve_and_aggregate(&[rs], &r);
+            assert_eq!(agg.len(), 1, "rs {rs} -> exactly one ore");
+            let det = agg.values().next().unwrap();
+            assert_eq!(det.ore.name, name, "rs {rs}");
+            assert!(
+                det.alternatives.is_empty(),
+                "rs {rs} -> no fuzzy alternatives"
+            );
+        }
+    }
 }
