@@ -4,6 +4,7 @@
 //! Ported from the Python `backend/src/resolver` + `data/signatures.json`.
 
 pub mod config;
+pub mod debounce;
 pub mod ocr;
 pub mod pipeline;
 pub mod preprocess;

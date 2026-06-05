@@ -1,5 +1,5 @@
-//! Runtime configuration (scan region, interval). Stored as JSON in the app
-//! config dir. The scan region is [x, y, width, height] in screen pixels.
+//! Runtime configuration (scan region, interval, OCR tuning). Stored as JSON in
+//! the app config dir. Defaults mirror the v1 Python `settings.json`.
 
 use std::path::Path;
 
@@ -15,6 +15,15 @@ pub struct Config {
     /// Upscale factor applied to the cropped region before OCR.
     #[serde(default = "default_scale")]
     pub upscale: u32,
+    /// Number must be detected this many consecutive frames before it's reported.
+    #[serde(default = "default_min_frames")]
+    pub min_consecutive_frames: u32,
+    /// CLAHE contrast clip limit.
+    #[serde(default = "default_clahe_clip")]
+    pub clahe_clip_limit: f64,
+    /// CLAHE tile grid [cols, rows].
+    #[serde(default = "default_clahe_grid")]
+    pub clahe_grid: [u32; 2],
 }
 
 fn default_interval() -> f64 {
@@ -23,6 +32,15 @@ fn default_interval() -> f64 {
 fn default_scale() -> u32 {
     4
 }
+fn default_min_frames() -> u32 {
+    3
+}
+fn default_clahe_clip() -> f64 {
+    0.0 // CLAHE off by default; ocrs reads raw upscaled text better (see preprocess)
+}
+fn default_clahe_grid() -> [u32; 2] {
+    [8, 8]
+}
 
 impl Default for Config {
     fn default() -> Self {
@@ -30,6 +48,9 @@ impl Default for Config {
             scan_region: None,
             scan_interval_secs: default_interval(),
             upscale: default_scale(),
+            min_consecutive_frames: default_min_frames(),
+            clahe_clip_limit: default_clahe_clip(),
+            clahe_grid: default_clahe_grid(),
         }
     }
 }
