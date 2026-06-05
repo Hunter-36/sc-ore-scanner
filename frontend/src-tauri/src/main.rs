@@ -12,8 +12,14 @@ mod scan;
 /// Open the calibration overlay: a full-screen, semi-transparent window over the
 /// PRIMARY monitor (the one the scan loop captures). Drag a box and release to
 /// save — mirrors the old Python calibrate.py. Re-uses the window if already open.
+///
+/// MUST be async: a synchronous command runs on the main thread, and building a
+/// window there deadlocks (the window appears but build() never returns, freezing
+/// the whole app — which is why save/quit stopped working). As an async command
+/// this runs off the main thread, so window creation dispatches to the free event
+/// loop.
 #[tauri::command]
-fn open_calibration(app: AppHandle) -> Result<(), String> {
+async fn open_calibration(app: AppHandle) -> Result<(), String> {
     log::info!("open_calibration requested");
     if let Some(w) = app.get_webview_window("calibrate") {
         let _ = w.show();
@@ -40,6 +46,7 @@ fn open_calibration(app: AppHandle) -> Result<(), String> {
             return Err(e.to_string());
         }
     };
+    log::info!("calibration window built");
 
     // Cover the PRIMARY monitor — the same one capture_primary() scans — so the
     // dragged box maps 1:1 to the capture, regardless of which monitor the
