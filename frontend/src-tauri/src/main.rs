@@ -93,16 +93,29 @@ fn quit() {
     std::process::exit(0);
 }
 
-/// Log to `logs/scanner.log` next to the exe (matching the v1 layout). Falls
-/// back silently to no file logging if the path can't be created.
-fn init_logging() {
-    let log_path = std::env::current_exe()
+/// Directory for the log file: `%APPDATA%\com.scorescanner.app\logs` (matches the
+/// Tauri app_config_dir on Windows), so logging works even when the app is
+/// installed read-only under Program Files. Falls back to next to the exe.
+fn log_dir() -> Option<std::path::PathBuf> {
+    if let Ok(appdata) = std::env::var("APPDATA") {
+        return Some(
+            std::path::PathBuf::from(appdata)
+                .join("com.scorescanner.app")
+                .join("logs"),
+        );
+    }
+    std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(|d| d.join("logs")))
-        .map(|dir| {
-            let _ = std::fs::create_dir_all(&dir);
-            dir.join("scanner.log")
-        });
+}
+
+/// Log to `<app config>/logs/scanner.log`. Falls back silently to no file
+/// logging if the path can't be created.
+fn init_logging() {
+    let log_path = log_dir().map(|dir| {
+        let _ = std::fs::create_dir_all(&dir);
+        dir.join("scanner.log")
+    });
 
     if let Some(path) = log_path {
         if let Ok(file) = std::fs::OpenOptions::new()
