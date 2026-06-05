@@ -36,6 +36,9 @@ struct OreOut {
 struct ScanResult {
     ores: HashMap<String, OreOut>,
     scanner_active: bool,
+    /// False until a scan region has been calibrated — lets the overlay prompt
+    /// the user to set one instead of sitting on "Starting scanner…".
+    configured: bool,
     timestamp: f64,
 }
 
@@ -100,34 +103,50 @@ pub fn start(app: AppHandle) {
                 last_price_refresh = Instant::now();
             }
 
-            if let Some(region) = cfg.scan_region {
-                match capture_primary()
-                    .and_then(|img| detect_ores(&img, Some(region), cfg.upscale, &ocr, &resolver))
-                {
-                    Ok(agg) => {
-                        let ores: HashMap<String, OreOut> = agg
-                            .into_iter()
-                            .map(|(id, m)| {
-                                let unit_price = prices.sell_price(&id);
-                                (
-                                    id,
-                                    OreOut {
-                                        name: m.ore.name,
-                                        quantity: m.quantity,
-                                        tier: m.ore.tier,
-                                        tier_value: m.ore.tier_value,
-                                        volatile: m.ore.volatile,
-                                        confidence: (m.confidence * 100.0).round() / 100.0,
-                                        detected_rs: m.detected_rs,
-                                        unit_price,
-                                    },
-                                )
-                            })
-                            .collect();
-                        let result = ScanResult { ores, scanner_active: true, timestamp: 0.0 };
-                        let _ = app.emit("scan-result", result);
+            match cfg.scan_region {
+                // No region yet — tell the overlay so it can prompt for calibration.
+                None => {
+                    let _ = app.emit(
+                        "scan-result",
+                        ScanResult {
+                            ores: HashMap::new(),
+                            scanner_active: false,
+                            configured: false,
+                            timestamp: 0.0,
+                        },
+                    );
+                }
+                Some(region) => {
+                    match capture_primary()
+                        .and_then(|img| detect_ores(&img, Some(region), cfg.upscale, &ocr, &resolver))
+                    {
+                        Ok(agg) => {
+                            let ores: HashMap<String, OreOut> = agg
+                                .into_iter()
+                                .map(|(id, m)| {
+                                    let unit_price = prices.sell_price(&id);
+                                    (
+                                        id,
+                                        OreOut {
+                                            name: m.ore.name,
+                                            quantity: m.quantity,
+                                            tier: m.ore.tier,
+                                            tier_value: m.ore.tier_value,
+                                            volatile: m.ore.volatile,
+                                            confidence: (m.confidence * 100.0).round() / 100.0,
+                                            detected_rs: m.detected_rs,
+                                            unit_price,
+                                        },
+                                    )
+                                })
+                                .collect();
+                            let _ = app.emit(
+                                "scan-result",
+                                ScanResult { ores, scanner_active: true, configured: true, timestamp: 0.0 },
+                            );
+                        }
+                        Err(e) => log::error!("scan: {e}"),
                     }
-                    Err(e) => log::error!("scan: {e}"),
                 }
             }
 

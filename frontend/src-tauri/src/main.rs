@@ -69,6 +69,14 @@ fn save_scan_region(app: AppHandle, x: u32, y: u32, w: u32, h: u32) -> Result<()
     Ok(())
 }
 
+/// Exit the whole app. More reliable than closing the window from JS (the in-process
+/// scan thread keeps running otherwise, and a drag-region header can swallow clicks).
+#[tauri::command]
+fn quit(app: AppHandle) {
+    log::info!("quit requested");
+    app.exit(0);
+}
+
 /// Log to `logs/scanner.log` next to the exe (matching the v1 layout). Falls
 /// back silently to no file logging if the path can't be created.
 fn init_logging() {
@@ -138,7 +146,7 @@ fn main() {
             scan::start(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![open_calibration, save_scan_region])
+        .invoke_handler(tauri::generate_handler![open_calibration, save_scan_region, quit])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

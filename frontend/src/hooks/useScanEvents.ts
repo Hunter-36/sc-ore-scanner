@@ -37,5 +37,21 @@ export function useScanEvents() {
     };
   }, []);
 
+  // Dev/test only: inject a scan result without the Rust core via
+  //   window.dispatchEvent(new CustomEvent('mock-scan', { detail: <ScanResult> }))
+  // This block is dead-code-eliminated from production builds (DEV === false),
+  // so it never ships. Used by the Playwright e2e suite and handy for UI dev.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const onMock = (e: Event) => {
+      const detail = (e as CustomEvent<ScanResult>).detail;
+      if (!detail) return;
+      setConnected(true);
+      updateFromScan(detail);
+    };
+    window.addEventListener('mock-scan', onMock);
+    return () => window.removeEventListener('mock-scan', onMock);
+  }, []);
+
   return { connected: useOreStore((s) => s.connected) };
 }

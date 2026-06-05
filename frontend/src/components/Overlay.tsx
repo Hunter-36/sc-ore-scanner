@@ -3,13 +3,18 @@ import { useScanEvents } from '../hooks/useScanEvents';
 import { OreCard } from './OreCard';
 
 async function closeOverlay() {
-  // The scan loop is in-process (v2), so closing the window exits the whole app.
+  // Exit the whole app via the Rust `quit` command (hard exit). Falls back to
+  // closing the window if that's unavailable.
   try {
-    const { getCurrentWindow } = await import('@tauri-apps/api/window');
-    await getCurrentWindow().close();
-  } catch (err) {
-    // Not running inside Tauri (e.g. browser/dev) — nothing to close.
-    console.warn('close() unavailable outside Tauri:', err);
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('quit');
+  } catch {
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().close();
+    } catch (err) {
+      console.warn('quit/close unavailable outside Tauri:', err);
+    }
   }
 }
 
@@ -23,7 +28,7 @@ async function openCalibration() {
 }
 
 export function Overlay() {
-  const { ores, scannerActive, connected, session } = useOreStore();
+  const { ores, scannerActive, configured, connected, session } = useOreStore();
   useScanEvents();
 
   const oreList = Object.entries(ores);
@@ -52,12 +57,13 @@ export function Overlay() {
           <button
             className="calibrate-btn"
             onClick={openCalibration}
+            onMouseDown={(e) => e.stopPropagation()}
             title="Set scan region"
             aria-label="Set scan region"
           >
             <svg
-              width="16"
-              height="16"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -70,11 +76,13 @@ export function Overlay() {
               <line x1="1" y1="12" x2="4" y2="12" />
               <line x1="20" y1="12" x2="23" y2="12" />
             </svg>
+            <span>Set region</span>
           </button>
           <button
             className="close-btn"
             onClick={closeOverlay}
-            title="Close overlay"
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Close / quit"
             aria-label="Close overlay"
           >
             ✕
@@ -87,15 +95,23 @@ export function Overlay() {
         {!connected && (
           <div className="message">
             <p>Starting scanner…</p>
-            <p className="hint">First launch loads the OCR engine (~15–20s). If this
-              persists, check logs/scanner.log.</p>
+            <p className="hint">Loading the OCR engine (~15–20s on first launch). If
+              this persists, check logs/scanner.log.</p>
           </div>
         )}
 
-        {connected && !hasOres && (
+        {connected && !configured && (
+          <div className="message">
+            <p>Set your scan region</p>
+            <p className="hint">Click <b>Set region</b> (top-right), then drag a box
+              around the mining scanner's <b>RS</b> number.</p>
+          </div>
+        )}
+
+        {connected && configured && !hasOres && (
           <div className="message">
             <p>{scannerActive ? 'No ores detected' : 'Waiting for scanner...'}</p>
-            <p className="hint">Point scanner at ores in-game</p>
+            <p className="hint">Point your scanner at ore deposits in-game.</p>
           </div>
         )}
 
