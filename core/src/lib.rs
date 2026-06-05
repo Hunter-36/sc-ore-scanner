@@ -3,6 +3,9 @@
 //! Phase 1: the RS-number -> ore resolver and the embedded signature database.
 //! Ported from the Python `backend/src/resolver` + `data/signatures.json`.
 
+pub mod ocr;
+pub mod pipeline;
+pub mod preprocess;
 pub mod resolver;
 pub mod signatures;
 
