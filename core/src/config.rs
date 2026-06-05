@@ -27,7 +27,9 @@ pub struct Config {
 }
 
 fn default_interval() -> f64 {
-    2.0
+    // Rust scans far faster than the Python v1, so we don't need its 2s gap.
+    // 0.75s x 3-frame debounce -> ~2.25s to confirm, while staying light on CPU.
+    0.75
 }
 fn default_scale() -> u32 {
     4
