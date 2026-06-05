@@ -208,16 +208,6 @@ body {
   pointer-events: none;
 }
 
-.debug-line {
-  padding: 4px 10px;
-  font-size: 10px;
-  font-family: monospace;
-  color: #ffd27f;
-  background: rgba(60, 40, 0, 0.5);
-  border-top: 1px solid rgba(255, 180, 60, 0.4);
-  word-break: break-all;
-}
-
 /* Session footer */
 .session-footer {
   padding: 6px 16px;
