@@ -18,10 +18,13 @@ async function closeCalibration() {
  * multiplying by devicePixelRatio. On release it saves the region and closes.
  */
 export function Calibrate() {
+  const surfaceRef = useRef<HTMLDivElement>(null);
   const start = useRef<Point | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
 
   useEffect(() => {
+    // Grab focus so Escape works immediately.
+    surfaceRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeCalibration();
     };
@@ -70,15 +73,29 @@ export function Calibrate() {
 
   return (
     <div
+      ref={surfaceRef}
       className="calibrate"
+      tabIndex={0}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
     >
-      <div className="calibrate-hint">
-        Drag a box around the mining scanner's <b>RS</b> readout, then release.
-        <span className="calibrate-sub">Esc to cancel</span>
+      {/* Instruction panel — clicking it must not start a drag. */}
+      <div
+        className="calibrate-panel"
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
+      >
+        <div className="calibrate-title">Set scan region</div>
+        <p className="calibrate-steps">
+          Click and <b>drag a box</b> around the mining scanner's <b>RS</b> number.
+          Release to save — it applies immediately and this window closes.
+        </p>
+        <button className="calibrate-cancel" onClick={closeCalibration}>
+          Cancel (Esc)
+        </button>
       </div>
+
       {rect && (
         <div
           className="calibrate-rect"

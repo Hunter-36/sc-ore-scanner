@@ -14,23 +14,40 @@ mod scan;
 #[tauri::command]
 fn open_calibration(app: AppHandle) -> Result<(), String> {
     if let Some(w) = app.get_webview_window("calibrate") {
+        let _ = w.show();
         let _ = w.set_focus();
         return Ok(());
     }
+
+    // Prefer the monitor the overlay is on (reliable), then the primary monitor.
+    let monitor = app
+        .get_webview_window("main")
+        .and_then(|w| w.current_monitor().ok().flatten());
+
     let win = WebviewWindowBuilder::new(&app, "calibrate", WebviewUrl::App("index.html".into()))
         .title("Calibrate scan region")
         .decorations(false)
         .transparent(true)
         .always_on_top(true)
         .skip_taskbar(true)
+        .focused(true)
         .build()
         .map_err(|e| e.to_string())?;
-    if let Ok(Some(m)) = win.primary_monitor() {
-        let p = m.position();
-        let s = m.size();
-        let _ = win.set_position(PhysicalPosition::new(p.x, p.y));
-        let _ = win.set_size(PhysicalSize::new(s.width, s.height));
+
+    match monitor.or_else(|| win.primary_monitor().ok().flatten()) {
+        Some(m) => {
+            let p = m.position();
+            let s = m.size();
+            let _ = win.set_position(PhysicalPosition::new(p.x, p.y));
+            let _ = win.set_size(PhysicalSize::new(s.width, s.height));
+        }
+        // No monitor info — at least fill the work area so it's never a tiny
+        // blank window the user can't escape.
+        None => {
+            let _ = win.maximize();
+        }
     }
+    let _ = win.show();
     let _ = win.set_focus();
     Ok(())
 }
