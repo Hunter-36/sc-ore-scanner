@@ -137,54 +137,33 @@ body {
   background: rgba(0, 200, 255, 0.28);
 }
 
-/* Calibration window (label "calibrate"): a top panel + a screenshot stage. */
+/* Calibration overlay (label "calibrate"): full-screen, semi-transparent, like
+   the old Python calibrate.py. Drag a box; release saves. */
 .calibrate {
   position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  background: #0a0f16;
-  color: #e6f7ff;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(2, 10, 22, 0.4);
+  cursor: crosshair;
   overflow: hidden;
   user-select: none;
+  outline: none;
 }
 
 .calibrate-panel {
-  flex-shrink: 0;
-  padding: 14px 20px;
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 84vw);
+  padding: 18px 22px;
   background: rgba(0, 30, 60, 0.95);
-  border-bottom: 1px solid rgba(0, 200, 255, 0.4);
+  border: 1px solid rgba(0, 200, 255, 0.55);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 18px rgba(0, 200, 255, 0.25);
   text-align: center;
-}
-
-.calibrate-stage-wrap {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-
-.calibrate-stage {
-  position: relative;
-  background: #11161c;
-  cursor: crosshair;
-  overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(0, 200, 255, 0.3);
-}
-
-.calibrate-shot {
-  display: block;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  -webkit-user-drag: none;
-}
-
-.calibrate-error {
-  font-size: 15px;
-  color: #cfe6f5;
+  cursor: default;
 }
 
 .calibrate-title {
@@ -202,94 +181,32 @@ body {
   color: #e6f7ff;
 }
 
-.calibrate-actions {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.calibrate-actions button {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.calibrate-confirm {
-  background: rgba(0, 200, 255, 0.22);
-  border: 1px solid rgba(0, 200, 255, 0.7);
-  color: #aef0ff;
-}
-
-.calibrate-confirm:hover {
-  background: rgba(0, 200, 255, 0.4);
-}
-
-.calibrate-redraw {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  color: #d8e6f0;
-}
-
-.calibrate-redraw:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
 .calibrate-cancel {
   background: rgba(255, 51, 102, 0.18);
   border: 1px solid rgba(255, 102, 136, 0.6);
   color: #ff8aa3;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
 .calibrate-cancel:hover {
   background: rgba(255, 51, 102, 0.32);
 }
 
-/* The selection box: transparent blue fill, bright blue border. */
+/* The selection box: transparent blue fill, bright blue border, dimmed outside. */
 .calibrate-box {
   position: absolute;
   border: 2px solid #2da8ff;
   background: rgba(45, 168, 255, 0.18);
-  box-shadow: 0 0 0 9999px rgba(2, 10, 22, 0.5), 0 0 14px rgba(45, 168, 255, 0.85),
+  box-shadow: 0 0 0 9999px rgba(2, 10, 22, 0.35), 0 0 14px rgba(45, 168, 255, 0.85),
     inset 0 0 12px rgba(45, 168, 255, 0.35);
-  cursor: move;
-}
-
-.calibrate-size {
-  position: absolute;
-  top: -22px;
-  left: 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: #aef0ff;
-  background: rgba(2, 10, 22, 0.8);
-  padding: 1px 6px;
-  border-radius: 3px;
-  white-space: nowrap;
   pointer-events: none;
 }
-
-.calibrate-handle {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  background: #2da8ff;
-  border: 1px solid #ffffff;
-  border-radius: 2px;
-  box-shadow: 0 0 6px rgba(45, 168, 255, 0.8);
-}
-
-.handle-nw { top: -6px; left: -6px; cursor: nwse-resize; }
-.handle-n  { top: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-.handle-ne { top: -6px; right: -6px; cursor: nesw-resize; }
-.handle-e  { top: 50%; right: -6px; transform: translateY(-50%); cursor: ew-resize; }
-.handle-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
-.handle-s  { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-.handle-sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
-.handle-w  { top: 50%; left: -6px; transform: translateY(-50%); cursor: ew-resize; }
 
 /* Session footer */
 .session-footer {

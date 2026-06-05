@@ -23,7 +23,6 @@ image = "0.25"
 anyhow = "1"
 log = "0.4"
 simplelog = "0.12"
-base64 = "0.22"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
