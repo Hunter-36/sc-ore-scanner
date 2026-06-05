@@ -16,6 +16,7 @@ type Ore = {
   confidence: number;
   detected_rs: number;
   unit_price?: number | null;
+  alternatives?: string[];
 };
 
 type ScanResult = {
@@ -140,6 +141,28 @@ test('shows "no ores" when scanning but nothing detected', async ({ page }) => {
   await expect(page.locator('.message')).toContainText('No ores detected');
   // No detections yet -> no session footer.
   await expect(page.locator('.session-footer')).toHaveCount(0);
+});
+
+test('shows the alternative reading for an ambiguous signature', async ({ page }) => {
+  await emitScan(page, {
+    ores: {
+      savrilium: {
+        name: 'Savrilium',
+        quantity: 6,
+        tier: 'A',
+        tier_value: 3,
+        volatile: false,
+        confidence: 1,
+        detected_rs: 19200,
+        unit_price: null,
+        alternatives: ['5x Aslarite'],
+      },
+    },
+    scanner_active: true,
+    timestamp: 1,
+  });
+  const card = page.locator('.ore-card', { hasText: 'Savrilium' });
+  await expect(card.locator('.ore-alt')).toContainText('5x Aslarite');
 });
 
 test('omits the price line when an ore has no known price', async ({ page }) => {

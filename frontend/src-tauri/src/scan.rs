@@ -32,6 +32,9 @@ struct OreOut {
     detected_rs: i64,
     /// Best sell price per SCU (aUEC), if the feed knows this ore.
     unit_price: Option<i64>,
+    /// Equally-likely alternative readings of the same RS (ambiguous signature),
+    /// e.g. ["5x Aslarite"]; empty when unambiguous. Mirrors OreData.alternatives.
+    alternatives: Vec<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -159,7 +162,15 @@ pub fn start(app: AppHandle) {
                                 let mut names: Vec<String> = agg
                                     .values()
                                     .map(|m| {
-                                        format!("{}x {} (rs {})", m.quantity, m.ore.name, m.detected_rs)
+                                        let alt = if m.alternatives.is_empty() {
+                                            String::new()
+                                        } else {
+                                            format!(" [or {}]", m.alternatives.join(", "))
+                                        };
+                                        format!(
+                                            "{}x {} (rs {}){}",
+                                            m.quantity, m.ore.name, m.detected_rs, alt
+                                        )
                                     })
                                     .collect();
                                 names.sort();
@@ -188,6 +199,7 @@ pub fn start(app: AppHandle) {
                                                 confidence: (m.confidence * 100.0).round() / 100.0,
                                                 detected_rs: m.detected_rs,
                                                 unit_price,
+                                                alternatives: m.alternatives,
                                             },
                                         )
                                     })

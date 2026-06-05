@@ -3,13 +3,27 @@
 //! extraction -> RS range filter -> (debounce, in the caller) -> resolve
 //! (best ore per reading) -> aggregate.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 
 use crate::ocr::Ocr;
 use crate::preprocess::preprocess_for_ocr;
 use crate::resolver::{OreMatch, Resolver};
+use crate::signatures::OreSignature;
+
+/// A resolved ore for a reading, plus any equally-likely alternative readings of
+/// the same RS number (an ambiguous signature, e.g. 19,200 = 6× Savrilium = 5×
+/// Aslarite). `alternatives` holds the other interpretations as display strings
+/// like "5x Aslarite"; empty when the reading is unambiguous.
+#[derive(Debug, Clone)]
+pub struct Detection {
+    pub ore: OreSignature,
+    pub quantity: i64,
+    pub detected_rs: i64,
+    pub confidence: f64,
+    pub alternatives: Vec<String>,
+}
 
 const DEFAULT_CLAHE_CLIP: f64 = 0.0; // off — see preprocess_for_ocr
 const DEFAULT_CLAHE_GRID: [u32; 2] = [8, 8];
@@ -73,15 +87,55 @@ pub fn recognize_rs_numbers_from_processed(
     Ok(numbers)
 }
 
-/// Resolve each RS number to its best ore (exact beats fuzzy) and aggregate.
-pub fn resolve_and_aggregate(numbers: &[i64], resolver: &Resolver) -> HashMap<String, OreMatch> {
-    let mut matches: Vec<OreMatch> = Vec::new();
+/// Resolve each RS number to its best ore and aggregate (best per ore id). When a
+/// reading has several equally-confident interpretations (an ambiguous signature),
+/// the extras are kept on `Detection::alternatives` instead of being silently
+/// dropped, so the overlay can show "could be either".
+pub fn resolve_and_aggregate(numbers: &[i64], resolver: &Resolver) -> HashMap<String, Detection> {
+    let mut agg: HashMap<String, Detection> = HashMap::new();
     for &num in numbers {
-        if let Some(best) = resolver.resolve(num, 1.0).into_iter().next() {
-            matches.push(best);
+        let matches = resolver.resolve(num, 1.0);
+        let Some(best) = matches.first() else {
+            continue;
+        };
+        let top = best.confidence;
+
+        // Collect the tied-top interpretations (same confidence — i.e. an exact
+        // collision). `matches` is sorted desc, so stop at the first lower one.
+        // De-dup by (ore name, quantity) since correction paths can repeat a hit.
+        let mut seen: HashSet<(String, i64)> = HashSet::new();
+        let mut tied: Vec<&OreMatch> = Vec::new();
+        for m in &matches {
+            if (m.confidence - top).abs() > 1e-9 {
+                break;
+            }
+            if seen.insert((m.ore.name.clone(), m.quantity)) {
+                tied.push(m);
+            }
         }
+
+        let primary = tied[0];
+        let alternatives: Vec<String> = tied[1..]
+            .iter()
+            .map(|m| format!("{}x {}", m.quantity, m.ore.name))
+            .collect();
+        let det = Detection {
+            ore: primary.ore.clone(),
+            quantity: primary.quantity,
+            detected_rs: primary.detected_rs,
+            confidence: primary.confidence,
+            alternatives,
+        };
+
+        agg.entry(primary.ore.id.clone())
+            .and_modify(|e| {
+                if det.confidence > e.confidence {
+                    *e = det.clone();
+                }
+            })
+            .or_insert(det);
     }
-    resolver.aggregate(&matches)
+    agg
 }
 
 /// Single-frame detection (no debouncing) — used by the validation tool/tests.
@@ -91,7 +145,7 @@ pub fn detect_ores(
     scale: u32,
     ocr: &Ocr,
     resolver: &Resolver,
-) -> Result<HashMap<String, OreMatch>> {
+) -> Result<HashMap<String, Detection>> {
     let numbers = recognize_rs_numbers(
         img,
         region,
@@ -141,5 +195,31 @@ mod tests {
         assert_eq!(extract_numbers("10,620"), ["10620"]);
         assert_eq!(extract_numbers("880"), ["880"]);
         assert_eq!(extract_numbers("UNKNOWN"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn ambiguous_signature_keeps_both_interpretations() {
+        // 19,200 = 6 x Savrilium (3200) = 5 x Aslarite (3840) — both exact.
+        let r = crate::resolver::Resolver::new();
+        let agg = super::resolve_and_aggregate(&[19_200], &r);
+        assert_eq!(agg.len(), 1, "ambiguous reading -> one primary card");
+        let det = agg.values().next().unwrap();
+        let mut all = det.alternatives.clone();
+        all.push(format!("{}x {}", det.quantity, det.ore.name));
+        all.sort();
+        assert_eq!(
+            all,
+            vec!["5x Aslarite".to_string(), "6x Savrilium".to_string()]
+        );
+    }
+
+    #[test]
+    fn unambiguous_signature_has_no_alternatives() {
+        // 10,620 = 3 x Beryl, no other exact interpretation.
+        let r = crate::resolver::Resolver::new();
+        let agg = super::resolve_and_aggregate(&[10_620], &r);
+        let det = agg.values().next().unwrap();
+        assert_eq!((det.ore.name.as_str(), det.quantity), ("Beryl", 3));
+        assert!(det.alternatives.is_empty());
     }
 }
