@@ -18,3 +18,4 @@ log = "0.4"
 
 [build-dependencies]
 ureq = { version = "2", features = ["tls"] }
+sha2 = "0.10"
