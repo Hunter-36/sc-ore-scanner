@@ -40,8 +40,9 @@ frontend/src-tauri/target/
 core/target/
 frontend/dist/
 
-# Generated price feed (built by the prices workflow, deployed to Pages)
-public/
+# Generated price feed (built by the prices workflow, deployed to Pages).
+# Anchored to repo root so it doesn't also ignore frontend/public/ (app assets).
+/public/
 
 # IDE
 .idea/
