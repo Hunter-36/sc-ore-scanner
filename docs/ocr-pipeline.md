@@ -30,7 +30,7 @@ Detection/recognition is done by [`ocrs`](https://github.com/robertknight/ocrs)
 2. **Upscale** ×`upscale` (default 4, Lanczos) so the small text is large enough.
 3. *(Optional)* **grayscale + CLAHE** contrast — see below; off by default.
 4. **ocrs** OCRs the crop, returning text lines.
-5. **Per-number extraction** (`pipeline::extract_numbers`): split each line into number
+5. **Per-number extraction** (the internal `extract_numbers` helper): split each line into number
    tokens — commas are kept as thousands separators, but spaces/periods/letters end a
    token. So `"0 7,080 18.8km"` → `["0","7080","18","8"]`. Keep tokens that are 3–6
    digit numbers within `valid_rs_min..max`. (The pin glyph / distance fragments fall
