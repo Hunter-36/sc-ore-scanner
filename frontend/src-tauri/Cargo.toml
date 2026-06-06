@@ -1,6 +1,6 @@
 [package]
 name = "sc-ore-scanner"
-version = "2.2.6"
+version = "2.2.7"
 description = "Star Citizen mining overlay - single-binary all-Rust app"
 authors = ["Hunter-36"]
 license = "MIT"
@@ -15,6 +15,7 @@ tauri-build = { version = "2.0", features = [] }
 [dependencies]
 tauri = { version = "2.0", features = ["devtools"] }
 tauri-plugin-window-state = "2"
+tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 scanner-core = { path = "../../core" }

@@ -6,6 +6,13 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.7] - 2026-06-06
+
+### Added
+- Single-instance lock: launching the app a second time now focuses the existing
+  overlay instead of starting a second scanner that would fight over screen
+  capture. (#61)
+
 ## [2.2.6] - 2026-06-06
 
 ### Changed
