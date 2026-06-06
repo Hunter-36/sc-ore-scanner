@@ -113,6 +113,27 @@ mod tests {
     }
 
     #[test]
+    fn reset_clears_history() {
+        // Mirrors the scan loop resetting on recalibration: a number confirmed
+        // in the old region must not carry over and falsely confirm in the new.
+        let mut d = Debouncer::new(3);
+        d.update(&[7080]);
+        d.update(&[7080]);
+        d.update(&[7080]);
+        assert_eq!(d.confirmed(), vec![7080]);
+
+        d.reset();
+        assert!(d.confirmed().is_empty(), "reset clears confirmed history");
+
+        // After reset the streak starts from zero, not from the old count.
+        d.update(&[7080]);
+        d.update(&[7080]);
+        assert!(d.confirmed().is_empty(), "only 2 frames since reset");
+        d.update(&[7080]);
+        assert_eq!(d.confirmed(), vec![7080]);
+    }
+
+    #[test]
     fn set_min_frames_preserves_history() {
         let mut d = Debouncer::new(3);
         d.update(&[7080]);
