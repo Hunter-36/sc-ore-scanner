@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/icon-master.png" width="120" alt="SC Ore Scanner icon" />
+</p>
+
 # SC Ore Scanner
 
 Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number off the mining scanner HUD on screen, matches it to the corresponding ore type, and shows the ore name, quantity, and market price in an always-on-top overlay.
