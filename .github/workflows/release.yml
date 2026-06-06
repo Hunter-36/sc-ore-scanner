@@ -81,15 +81,28 @@ jobs:
           # Portable single exe, zipped with a friendly name.
           $stage = "staging"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          Copy-Item "$rel/sc-ore-scanner.exe" -Destination (Join-Path $stage "SC Ore Scanner.exe")
+          $exe = "$rel/sc-ore-scanner.exe"
+          if (-not (Test-Path $exe)) { throw "Build produced no portable exe: $exe" }
+          Copy-Item $exe -Destination (Join-Path $stage "SC Ore Scanner.exe")
           $zip = "sc-ore-scanner-$($env:RELEASE_TAG)-windows-portable.zip"
           Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -Force
+          # Installers (a glob can be empty if a bundle didn't produce).
+          $nsis = Get-ChildItem "$rel/bundle/nsis/*-setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          $msi  = Get-ChildItem "$rel/bundle/msi/*.msi"        -ErrorAction SilentlyContinue | Select-Object -First 1
+          $nsisPath = if ($nsis) { $nsis.FullName } else { "" }
+          $msiPath  = if ($msi)  { $msi.FullName }  else { "" }
+          # Fail the release rather than publish a partial one (e.g. a missing
+          # MSI): every expected artifact must exist and be non-empty.
+          $artifacts = [ordered]@{ "portable zip" = $zip; "NSIS installer" = $nsisPath; "MSI installer" = $msiPath }
+          foreach ($name in $artifacts.Keys) {
+            $path = $artifacts[$name]
+            if ([string]::IsNullOrEmpty($path) -or -not (Test-Path $path) -or ((Get-Item $path).Length -eq 0)) {
+              throw "Release artifact missing or empty: $name ($path)"
+            }
+          }
           echo "ZIP_NAME=$zip" >> $env:GITHUB_ENV
-          # Installers.
-          $nsis = Get-ChildItem "$rel/bundle/nsis/*-setup.exe" | Select-Object -First 1
-          $msi  = Get-ChildItem "$rel/bundle/msi/*.msi"        | Select-Object -First 1
-          echo "NSIS_PATH=$($nsis.FullName)" >> $env:GITHUB_ENV
-          echo "MSI_PATH=$($msi.FullName)"   >> $env:GITHUB_ENV
+          echo "NSIS_PATH=$nsisPath" >> $env:GITHUB_ENV
+          echo "MSI_PATH=$msiPath"   >> $env:GITHUB_ENV
         env:
           RELEASE_TAG: ${{ needs.check.outputs.tag }}
 
