@@ -70,3 +70,8 @@ temp/
 
 # Tauri generated schemas (build artifact)
 frontend/src-tauri/gen/
+
+# Local OCR/crop debugging scratch (ad-hoc test binaries + probes, not project source)
+core/src/bin/
+core/test_crop.rs
+core/test_search.sh
