@@ -176,7 +176,8 @@ pub fn clahe(gray: &GrayImage, tiles_x: u32, tiles_y: u32, clip_limit: f32) -> G
 
 #[cfg(test)]
 mod tests {
-    use super::crop_rgba_to_rgb;
+    use super::{clahe, crop_and_upscale, crop_rgba_to_rgb};
+    use image::{GrayImage, Luma, Rgb, RgbImage};
 
     #[test]
     fn crops_region_from_rgba_buffer() {
@@ -200,5 +201,75 @@ mod tests {
         let img = crop_rgba_to_rgb(&raw, 1, 1, [0, 0, 100, 100]);
         assert_eq!(img.dimensions(), (1, 1));
         assert_eq!(img.get_pixel(0, 0).0, [9, 9, 9]);
+    }
+
+    /// A 4×4 image where each pixel's red channel encodes its index, so crops are
+    /// verifiable pixel-for-pixel.
+    fn indexed_rgb() -> RgbImage {
+        RgbImage::from_fn(4, 4, |x, y| Rgb([(y * 4 + x) as u8, 1, 2]))
+    }
+
+    #[test]
+    fn crop_and_upscale_crops_exactly_at_scale_1() {
+        let img = indexed_rgb();
+        // Region [1,0,2,2], no upscale → exact 2×2 crop of the original pixels.
+        let out = crop_and_upscale(&img, Some([1, 0, 2, 2]), 1);
+        assert_eq!(out.dimensions(), (2, 2));
+        assert_eq!(out.get_pixel(0, 0).0, [1, 1, 2]); // original (1,0)
+        assert_eq!(out.get_pixel(1, 0).0, [2, 1, 2]); // original (2,0)
+        assert_eq!(out.get_pixel(0, 1).0, [5, 1, 2]); // original (1,1)
+        assert_eq!(out.get_pixel(1, 1).0, [6, 1, 2]); // original (2,1)
+    }
+
+    #[test]
+    fn crop_and_upscale_multiplies_dimensions() {
+        let img = indexed_rgb();
+        // Region 2×2 upscaled ×4 → 8×8 (Lanczos interpolates values; only the
+        // dimensions are asserted).
+        let out = crop_and_upscale(&img, Some([0, 0, 2, 2]), 4);
+        assert_eq!(out.dimensions(), (8, 8));
+    }
+
+    #[test]
+    fn crop_and_upscale_none_region_scale_1_is_identity() {
+        let img = indexed_rgb();
+        let out = crop_and_upscale(&img, None, 1);
+        assert_eq!(out.dimensions(), (4, 4));
+        assert_eq!(out.as_raw(), img.as_raw());
+    }
+
+    #[test]
+    fn clahe_preserves_dimensions_and_is_deterministic() {
+        // Horizontal gradient, 8×8.
+        let g = GrayImage::from_fn(8, 8, |x, _| Luma([(x * 32) as u8]));
+        let a = clahe(&g, 2, 2, 2.0);
+        let b = clahe(&g, 2, 2, 2.0);
+        assert_eq!(a.dimensions(), (8, 8));
+        assert_eq!(a.as_raw(), b.as_raw(), "clahe must be deterministic");
+    }
+
+    #[test]
+    fn clahe_empty_image_is_noop() {
+        let g = GrayImage::new(0, 0);
+        let out = clahe(&g, 8, 8, 2.0);
+        assert_eq!(out.dimensions(), (0, 0));
+    }
+
+    #[test]
+    fn clahe_spreads_a_low_contrast_image() {
+        // Values clustered in a narrow band [100, 116) — CLAHE should widen the
+        // spread (max-min) rather than leave it unchanged.
+        let g = GrayImage::from_fn(8, 8, |x, y| Luma([100 + (((y * 8 + x) % 16) as u8)]));
+        let out = clahe(&g, 1, 1, 40.0);
+        let span = |img: &GrayImage| {
+            let vals: Vec<u8> = img.pixels().map(|p| p[0]).collect();
+            vals.iter().max().unwrap() - vals.iter().min().unwrap()
+        };
+        assert!(
+            span(&out) >= span(&g),
+            "CLAHE should not reduce contrast (in {} -> out {})",
+            span(&g),
+            span(&out)
+        );
     }
 }
