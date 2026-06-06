@@ -6,6 +6,14 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.4] - 2026-06-06
+
+### Fixed
+- The UEX price-feed fetch now has a connect/read timeout (10s) and a response
+  size cap, so a hung or oversized feed can no longer stall the overlay (the
+  fetch runs on the scan thread at startup and hourly). Last-good prices are
+  still kept on any failure. (#67)
+
 ## [2.2.3] - 2026-06-06
 
 ### Fixed
