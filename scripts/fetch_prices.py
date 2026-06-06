@@ -9,6 +9,7 @@ deployed to GitHub Pages; the app fetches it on a timer and caches it.
 Data: UEX Corp (https://uexcorp.space).
 """
 
+import html
 import json
 import sys
 import time
@@ -85,8 +86,11 @@ def render_index(output: dict) -> str:
     """Render a simple dark price table for the Pages root."""
     prices = output.get("prices", {})
     updated = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(output.get("updated_at") or 0))
+    # Escape the commodity name: it comes from the UEX feed and is interpolated
+    # into the published Pages HTML, so an unescaped name with markup would be
+    # stored XSS. Sell/buy are int()-coerced below, so they can't carry markup.
     rows = "\n".join(
-        f"      <tr><td>{p.get('name', oid)}</td>"
+        f"      <tr><td>{html.escape(str(p.get('name', oid)))}</td>"
         f"<td class='num'>{int(p.get('sell') or 0):,}</td>"
         f"<td class='num'>{int(p.get('buy') or 0):,}</td></tr>"
         for oid, p in sorted(prices.items(), key=lambda kv: kv[1].get("sell", 0), reverse=True)
