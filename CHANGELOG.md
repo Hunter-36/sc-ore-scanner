@@ -6,6 +6,14 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.2] - 2026-06-06
+
+### Fixed
+- The background scan loop now survives a panic in any single cycle: the
+  per-frame work (capture / OCR / resolve) runs under `catch_unwind`, so one bad
+  frame is logged and the loop continues instead of silently ending detection
+  for the session. The debouncer is reset after a caught panic. (#72)
+
 ## [2.2.1] - 2026-06-06
 
 ### Fixed

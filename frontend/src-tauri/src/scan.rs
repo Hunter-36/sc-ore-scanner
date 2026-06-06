@@ -68,6 +68,16 @@ pub fn capture_region(region: [u32; 4]) -> anyhow::Result<image::RgbImage> {
     ))
 }
 
+/// Run one scan cycle's work under panic protection. Returns `true` if it
+/// completed, `false` if it panicked (which is logged). The scan loop runs on a
+/// detached thread, so without this a single bad frame (a panic anywhere in
+/// capture/OCR/resolve) would end scanning permanently and the overlay would
+/// just go quiet. `AssertUnwindSafe` is sound here: on a panic we discard the
+/// frame and reset the debouncer, so no observer sees inconsistent state.
+fn run_guarded(f: impl FnOnce()) -> bool {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).is_ok()
+}
+
 /// Spawn the scan loop on a background thread. It reads the scan region from the
 /// app config each cycle, so calibration takes effect without a restart.
 pub fn start(app: AppHandle) {
@@ -120,7 +130,13 @@ pub fn start(app: AppHandle) {
 
             if last_region != Some(cfg.scan_region) {
                 match cfg.scan_region {
-                    Some(r) => log::info!("Scan region set to [{}, {}, {}, {}].", r[0], r[1], r[2], r[3]),
+                    Some(r) => log::info!(
+                        "Scan region set to [{}, {}, {}, {}].",
+                        r[0],
+                        r[1],
+                        r[2],
+                        r[3]
+                    ),
                     None => log::info!("No scan region set — click ‘Set region’ to calibrate."),
                 }
                 last_region = Some(cfg.scan_region);
@@ -137,112 +153,148 @@ pub fn start(app: AppHandle) {
                 last_price_refresh = Instant::now();
             }
 
-            match cfg.scan_region {
-                // No region yet — tell the overlay so it can prompt for calibration.
-                None => {
-                    debouncer.reset();
-                    let _ = app.emit(
-                        "scan-result",
-                        ScanResult {
-                            ores: HashMap::new(),
-                            scanner_active: false,
-                            configured: false,
-                        },
-                    );
-                }
-                Some(region) => match capture_region(region) {
-                    Ok(img) => {
-                        // Already cropped to the region, so just upscale (+CLAHE).
-                        let processed = preprocess_for_ocr(
-                            &img,
-                            None,
-                            cfg.upscale,
-                            cfg.clahe_clip_limit,
-                            cfg.clahe_grid,
+            let cycle_ok = run_guarded(|| {
+                match cfg.scan_region {
+                    // No region yet — tell the overlay so it can prompt for calibration.
+                    None => {
+                        debouncer.reset();
+                        let _ = app.emit(
+                            "scan-result",
+                            ScanResult {
+                                ores: HashMap::new(),
+                                scanner_active: false,
+                                configured: false,
+                            },
                         );
+                    }
+                    Some(region) => match capture_region(region) {
+                        Ok(img) => {
+                            // Already cropped to the region, so just upscale (+CLAHE).
+                            let processed = preprocess_for_ocr(
+                                &img,
+                                None,
+                                cfg.upscale,
+                                cfg.clahe_clip_limit,
+                                cfg.clahe_grid,
+                            );
 
-                        match recognize_rs_numbers_from_processed(&processed, &ocr, &resolver) {
-                            Ok(candidates) => {
-                                // Debounce, then resolve only the confirmed numbers.
-                                debouncer.update(&candidates);
-                                let confirmed = debouncer.confirmed();
-                                let agg = resolve_and_aggregate(&confirmed, &resolver);
+                            match recognize_rs_numbers_from_processed(&processed, &ocr, &resolver) {
+                                Ok(candidates) => {
+                                    // Debounce, then resolve only the confirmed numbers.
+                                    debouncer.update(&candidates);
+                                    let confirmed = debouncer.confirmed();
+                                    let agg = resolve_and_aggregate(&confirmed, &resolver);
 
-                                // Log only when the detected set changes.
-                                let mut names: Vec<String> = agg
-                                    .values()
-                                    .map(|m| {
-                                        let alt = if m.alternatives.is_empty() {
-                                            String::new()
-                                        } else {
-                                            format!(" [or {}]", m.alternatives.join(", "))
-                                        };
-                                        format!(
-                                            "{}x {} (rs {}){}",
-                                            m.quantity, m.ore.name, m.detected_rs, alt
-                                        )
-                                    })
-                                    .collect();
-                                names.sort();
-                                let summary = if names.is_empty() {
-                                    "no ores in view".to_string()
-                                } else {
-                                    names.join(", ")
-                                };
-                                if summary != last_summary {
-                                    log::info!("Detected: {summary}");
-                                    last_summary = summary;
+                                    // Log only when the detected set changes.
+                                    let mut names: Vec<String> = agg
+                                        .values()
+                                        .map(|m| {
+                                            let alt = if m.alternatives.is_empty() {
+                                                String::new()
+                                            } else {
+                                                format!(" [or {}]", m.alternatives.join(", "))
+                                            };
+                                            format!(
+                                                "{}x {} (rs {}){}",
+                                                m.quantity, m.ore.name, m.detected_rs, alt
+                                            )
+                                        })
+                                        .collect();
+                                    names.sort();
+                                    let summary = if names.is_empty() {
+                                        "no ores in view".to_string()
+                                    } else {
+                                        names.join(", ")
+                                    };
+                                    if summary != last_summary {
+                                        log::info!("Detected: {summary}");
+                                        last_summary = summary;
+                                    }
+
+                                    let ores: HashMap<String, OreOut> = agg
+                                        .into_iter()
+                                        .map(|(id, m)| {
+                                            let unit_price = prices.sell_price(&id);
+                                            (
+                                                id,
+                                                OreOut {
+                                                    name: m.ore.name,
+                                                    quantity: m.quantity,
+                                                    tier: m.ore.tier,
+                                                    tier_value: m.ore.tier_value,
+                                                    volatile: m.ore.volatile,
+                                                    confidence: (m.confidence * 100.0).round()
+                                                        / 100.0,
+                                                    detected_rs: m.detected_rs,
+                                                    unit_price,
+                                                    alternatives: m.alternatives,
+                                                },
+                                            )
+                                        })
+                                        .collect();
+                                    let _ = app.emit(
+                                        "scan-result",
+                                        ScanResult {
+                                            ores,
+                                            scanner_active: true,
+                                            configured: true,
+                                        },
+                                    );
                                 }
-
-                                let ores: HashMap<String, OreOut> = agg
-                                    .into_iter()
-                                    .map(|(id, m)| {
-                                        let unit_price = prices.sell_price(&id);
-                                        (
-                                            id,
-                                            OreOut {
-                                                name: m.ore.name,
-                                                quantity: m.quantity,
-                                                tier: m.ore.tier,
-                                                tier_value: m.ore.tier_value,
-                                                volatile: m.ore.volatile,
-                                                confidence: (m.confidence * 100.0).round() / 100.0,
-                                                detected_rs: m.detected_rs,
-                                                unit_price,
-                                                alternatives: m.alternatives,
-                                            },
-                                        )
-                                    })
-                                    .collect();
-                                let _ = app.emit(
-                                    "scan-result",
-                                    ScanResult {
-                                        ores,
-                                        scanner_active: true,
-                                        configured: true,
-                                    },
-                                );
-                            }
-                            Err(e) => {
-                                let msg = format!("ocr error: {e}");
-                                if msg != last_summary {
-                                    log::error!("{msg}");
-                                    last_summary = msg;
+                                Err(e) => {
+                                    let msg = format!("ocr error: {e}");
+                                    if msg != last_summary {
+                                        log::error!("{msg}");
+                                        last_summary = msg;
+                                    }
                                 }
                             }
                         }
-                    }
-                    Err(e) => {
-                        let msg = format!("capture error: {e}");
-                        if msg != last_summary {
-                            log::error!("{msg}");
-                            last_summary = msg;
+                        Err(e) => {
+                            let msg = format!("capture error: {e}");
+                            if msg != last_summary {
+                                log::error!("{msg}");
+                                last_summary = msg;
+                            }
                         }
-                    }
-                },
+                    },
+                }
+            });
+            if !cycle_ok {
+                // A panic in capture/OCR/resolve must not kill the session. Log,
+                // drop the frame, and reset the debouncer (its in-place state may
+                // be inconsistent) so the next cycle starts clean.
+                log::error!("scan cycle panicked; resetting debouncer and continuing");
+                debouncer.reset();
             }
 
             std::thread::sleep(interval);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::run_guarded;
+
+    #[test]
+    fn guarded_cycle_survives_panic() {
+        // Silence the default panic hook so the deliberate panic doesn't spam
+        // test output; restore it afterwards.
+        let prev = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+
+        let mut ran_after = false;
+        let panicked = !run_guarded(|| panic!("boom"));
+        // A subsequent cycle still runs — the loop is not dead.
+        let ok = run_guarded(|| ran_after = true);
+
+        std::panic::set_hook(prev);
+
+        assert!(panicked, "a panicking cycle is caught, not propagated");
+        assert!(
+            ok && ran_after,
+            "the next cycle runs normally after a panic"
+        );
+    }
 }
