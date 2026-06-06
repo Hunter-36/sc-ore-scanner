@@ -37,12 +37,22 @@ async function loadConfig(): Promise<Cfg> {
   }
 }
 
-async function saveConfig(update: Cfg) {
+/// Persist settings. Returns null on success OR when not running under Tauri
+/// (e.g. browser dev — nothing to surface), and an error string when a genuine
+/// `set_config` call is rejected (I/O / permission) so the UI can show it.
+async function saveConfig(update: Cfg): Promise<string | null> {
+  let core: typeof import('@tauri-apps/api/core');
   try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('set_config', { update });
+    core = await import('@tauri-apps/api/core');
+  } catch {
+    return null; // not in Tauri — indistinguishable from "no backend", don't alarm
+  }
+  try {
+    await core.invoke('set_config', { update });
+    return null;
   } catch (e) {
-    console.warn('set_config unavailable outside Tauri:', e);
+    console.warn('set_config failed:', e);
+    return String(e);
   }
 }
 
@@ -52,12 +62,19 @@ const detectSeconds = (c: Cfg) => (c.scan_interval_secs * c.min_consecutive_fram
 
 export function Settings({ onClose }: { onClose: () => void }) {
   const [cfg, setCfg] = useState<Cfg | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const dirty = useRef(false);
   const saveTimer = useRef<number | undefined>(undefined);
+  // Latest cfg, readable from the unmount cleanup without making it a dep.
+  const latestCfg = useRef<Cfg | null>(null);
 
   useEffect(() => {
     loadConfig().then(setCfg);
   }, []);
+
+  useEffect(() => {
+    latestCfg.current = cfg;
+  }, [cfg]);
 
   // Persist (debounced) after a user change. The `dirty` gate skips the initial
   // load; the timer batches a slider drag into a single write ~200ms after it
@@ -66,18 +83,31 @@ export function Settings({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (!cfg || !dirty.current) return;
     if (saveTimer.current !== undefined) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => void saveConfig(cfg), 200);
+    saveTimer.current = window.setTimeout(() => {
+      void saveConfig(cfg).then(setSaveError);
+    }, 200);
     return () => {
       if (saveTimer.current !== undefined) window.clearTimeout(saveTimer.current);
     };
   }, [cfg]);
+
+  // Flush a pending edit when the panel unmounts — closing via the gear toggle
+  // unmounts without going through handleDone, so the debounce cleanup would
+  // otherwise drop an edit made <200ms before the click. Empty deps → this
+  // cleanup runs only on unmount.
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current !== undefined) window.clearTimeout(saveTimer.current);
+      if (dirty.current && latestCfg.current) void saveConfig(latestCfg.current);
+    };
+  }, []);
 
   function update(patch: Partial<Cfg>) {
     dirty.current = true;
     setCfg((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
-  // Flush any pending debounced write when leaving the panel.
+  // Flush any pending debounced write when leaving the panel via Done.
   function handleDone() {
     if (saveTimer.current !== undefined) window.clearTimeout(saveTimer.current);
     if (dirty.current && cfg) void saveConfig(cfg);
@@ -168,6 +198,12 @@ export function Settings({ onClose }: { onClose: () => void }) {
         />
         <span className="settings-hint">0 = off (recommended); can hurt detection — only for very dark HUDs</span>
       </label>
+
+      {saveError && (
+        <div className="settings-error" role="alert" style={{ color: '#ff6b6b', fontSize: '0.85rem' }}>
+          Couldn't save settings: {saveError}
+        </div>
+      )}
 
       <button className="settings-done" onClick={handleDone}>
         Done

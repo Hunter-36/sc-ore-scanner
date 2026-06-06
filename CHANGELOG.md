@@ -6,6 +6,14 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.8] - 2026-06-06
+
+### Fixed
+- Settings: an edit made just before closing the panel via the gear toggle is no
+  longer lost — a pending debounced save is now flushed on unmount, not just by
+  the Done button. A genuine save failure (distinct from running outside Tauri)
+  is now surfaced in the panel instead of silently swallowed. (#70)
+
 ## [2.2.0] - 2026-06-05
 
 ### Added
