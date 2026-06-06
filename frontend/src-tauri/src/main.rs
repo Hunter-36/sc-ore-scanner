@@ -260,6 +260,17 @@ fn main() {
     log::info!("SC Ore Scanner v{} starting.", env!("CARGO_PKG_VERSION"));
 
     tauri::Builder::default()
+        // Single-instance: two overlays would both run the scan loop and fight
+        // over screen capture. Registered FIRST (per the plugin's guidance). When
+        // a second launch is attempted, this callback runs in the EXISTING
+        // instance — focus its window — and the second process exits.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         // Remember only the overlay's POSITION across launches (not size), so the
         // window dimensions always come from the config — otherwise a stored size
         // would override height changes shipped in updates. State lives in
