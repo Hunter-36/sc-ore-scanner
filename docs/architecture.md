@@ -40,7 +40,8 @@ pushed to the React overlay via a Tauri event. No separate backend, no WebSocket
 - `scan.rs` — the background scan loop: capture → preprocess → `recognize_rs_numbers`
   → debounce → `resolve_and_aggregate` → `emit("scan-result")`. Also fetches prices.
 - `main.rs` — windows, first-run overlay placement, the calibration command
-  (`open_calibration`, **async** — see gotchas), `save_scan_region`, `quit`, logging.
+  (`open_calibration`, **async** — see gotchas), `save_scan_region`, `get_config`,
+  `set_config`, `quit`, logging.
 
 ## Data flow
 

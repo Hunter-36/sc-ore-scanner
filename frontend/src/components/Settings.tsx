@@ -25,7 +25,7 @@ const PRESETS: Record<PresetKey, Pick<Cfg, 'scan_interval_secs' | 'min_consecuti
 async function loadConfig(): Promise<Cfg> {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const c = await invoke<Partial<Cfg>>('get_config');
+    const c = await invoke<Cfg>('get_config');
     return {
       scan_interval_secs: c.scan_interval_secs ?? DEFAULTS.scan_interval_secs,
       min_consecutive_frames: c.min_consecutive_frames ?? DEFAULTS.min_consecutive_frames,
