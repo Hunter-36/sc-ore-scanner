@@ -6,6 +6,14 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.1] - 2026-06-06
+
+### Fixed
+- `Config::load` now clamps every tunable to the same ranges the settings UI
+  enforces, so a hand-edited or migrated `config.json` can't break detection.
+  Notably, a `min_consecutive_frames` above the debouncer's history window would
+  previously make detection silently never confirm. (#66)
+
 ## [2.2.0] - 2026-06-05
 
 ### Added

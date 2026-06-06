@@ -59,11 +59,47 @@ impl Default for Config {
 
 impl Config {
     /// Load config from `path`, falling back to defaults if missing/invalid.
+    ///
+    /// Values are clamped to the same ranges the `set_config` Tauri command
+    /// enforces, so a hand-edited or migrated `config.json` can't feed
+    /// out-of-range values into the scan loop. The worst case this guards
+    /// against: `min_consecutive_frames` above the debouncer's history window,
+    /// which would make detection silently never confirm.
     pub fn load(path: &Path) -> Self {
-        std::fs::read_to_string(path)
+        let mut cfg: Self = std::fs::read_to_string(path)
             .ok()
             .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default()
+            .unwrap_or_default();
+        cfg.clamp();
+        cfg
+    }
+
+    /// Clamp every tunable to a sane range (mirrors `set_config`). Non-finite
+    /// floats fall back to their defaults rather than propagating NaN.
+    pub fn clamp(&mut self) {
+        if !self.scan_interval_secs.is_finite() {
+            self.scan_interval_secs = default_interval();
+        }
+        self.scan_interval_secs = self.scan_interval_secs.clamp(0.3, 5.0);
+
+        self.min_consecutive_frames = self.min_consecutive_frames.clamp(1, 6);
+        self.upscale = self.upscale.clamp(1, 6);
+
+        if !self.clahe_clip_limit.is_finite() {
+            self.clahe_clip_limit = default_clahe_clip();
+        }
+        self.clahe_clip_limit = self.clahe_clip_limit.clamp(0.0, 8.0);
+
+        // A zero-dimension CLAHE tile grid would divide by zero in preprocess.
+        self.clahe_grid = [self.clahe_grid[0].max(1), self.clahe_grid[1].max(1)];
+
+        // A degenerate (zero-width or zero-height) region can't be cropped;
+        // drop it so the app behaves as if uncalibrated rather than crashing.
+        if let Some([_, _, w, h]) = self.scan_region {
+            if w == 0 || h == 0 {
+                self.scan_region = None;
+            }
+        }
     }
 
     pub fn save(&self, path: &Path) -> std::io::Result<()> {
