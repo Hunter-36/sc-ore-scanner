@@ -141,6 +141,10 @@ pub fn start(app: AppHandle) {
                 }
                 last_region = Some(cfg.scan_region);
                 last_summary.clear();
+                // Recalibrating to a different box must not carry stale frame
+                // counts across — otherwise an ore from the old region could
+                // falsely confirm in the new one. Start the new region clean.
+                debouncer.reset();
             }
 
             // Refresh prices hourly. Reset the timer even on failure so we don't
@@ -242,6 +246,12 @@ pub fn start(app: AppHandle) {
                                     );
                                 }
                                 Err(e) => {
+                                    // An error frame is a miss, not a skipped
+                                    // frame: feed an empty result so a transient
+                                    // error between two good reads breaks the
+                                    // streak instead of letting them count as
+                                    // consecutive (faithful to v1).
+                                    debouncer.update(&[]);
                                     let msg = format!("ocr error: {e}");
                                     if msg != last_summary {
                                         log::error!("{msg}");
@@ -251,6 +261,9 @@ pub fn start(app: AppHandle) {
                             }
                         }
                         Err(e) => {
+                            // Capture failure is a miss too (see the OCR-error
+                            // branch) — break the streak rather than skip.
+                            debouncer.update(&[]);
                             let msg = format!("capture error: {e}");
                             if msg != last_summary {
                                 log::error!("{msg}");

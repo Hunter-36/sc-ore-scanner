@@ -6,6 +6,14 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.3] - 2026-06-06
+
+### Fixed
+- Debounce state is now correct across recalibration and error frames: the scan
+  loop resets the debouncer when the scan region changes (so an ore from the old
+  box can't falsely confirm in the new one), and a capture/OCR error now counts
+  as a missed frame (breaking the confirm streak) instead of being skipped. (#63)
+
 ## [2.2.2] - 2026-06-06
 
 ### Fixed
