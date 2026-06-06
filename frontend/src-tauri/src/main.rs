@@ -160,8 +160,80 @@ fn log_dir() -> Option<std::path::PathBuf> {
         .and_then(|exe| exe.parent().map(|d| d.join("logs")))
 }
 
+/// Sensitive substrings to scrub from every log line, paired with their
+/// placeholder. The log records the config path on startup (and paths in other
+/// lines), which on Windows embeds the user's name — mild PII in a file people
+/// attach to bug reports. Longest first so the full home path is redacted before
+/// the bare username it contains.
+fn redaction_needles() -> Vec<(String, &'static str)> {
+    let mut needles: Vec<(String, &'static str)> = Vec::new();
+    if let Ok(p) = std::env::var("USERPROFILE") {
+        if !p.is_empty() {
+            needles.push((p, "%USERPROFILE%"));
+        }
+    }
+    if let Ok(h) = std::env::var("HOME") {
+        if !h.is_empty() {
+            needles.push((h, "$HOME"));
+        }
+    }
+    if let Ok(u) = std::env::var("USERNAME").or_else(|_| std::env::var("USER")) {
+        if !u.is_empty() {
+            needles.push((u, "<user>"));
+        }
+    }
+    needles.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    needles
+}
+
+/// A `Write` wrapper that redacts sensitive substrings from each line before it
+/// reaches the log file. Best-effort: it redacts per write call (simplelog
+/// writes a record at a time), which covers the path lines we care about.
+struct RedactingWriter<W: std::io::Write> {
+    inner: W,
+    needles: Vec<(String, &'static str)>,
+}
+
+impl<W: std::io::Write> RedactingWriter<W> {
+    fn new(inner: W) -> Self {
+        Self {
+            inner,
+            needles: redaction_needles(),
+        }
+    }
+}
+
+impl<W: std::io::Write> std::io::Write for RedactingWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if self.needles.is_empty() {
+            return self.inner.write(buf);
+        }
+        match std::str::from_utf8(buf) {
+            Ok(s) => {
+                let mut red = s.to_owned();
+                for (needle, repl) in &self.needles {
+                    if red.contains(needle.as_str()) {
+                        red = red.replace(needle.as_str(), repl);
+                    }
+                }
+                self.inner.write_all(red.as_bytes())?;
+                // Report the whole input as consumed; the redacted form may
+                // differ in length but the caller's buffer is fully handled.
+                Ok(buf.len())
+            }
+            // Non-UTF-8 (shouldn't happen for log text) passes through untouched.
+            Err(_) => self.inner.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
 /// Log to `<app config>/logs/scanner.log`. Falls back silently to no file
-/// logging if the path can't be created.
+/// logging if the path can't be created. Log lines are scrubbed of the user's
+/// home path / username (see `RedactingWriter`).
 fn init_logging() {
     let log_path = log_dir().map(|dir| {
         let _ = std::fs::create_dir_all(&dir);
@@ -177,7 +249,7 @@ fn init_logging() {
             let _ = simplelog::WriteLogger::init(
                 simplelog::LevelFilter::Info,
                 simplelog::Config::default(),
-                file,
+                RedactingWriter::new(file),
             );
         }
     }
@@ -242,4 +314,45 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RedactingWriter;
+    use std::io::Write;
+
+    #[test]
+    fn redacts_home_path_and_username() {
+        let mut w = RedactingWriter {
+            inner: Vec::<u8>::new(),
+            // Longest first, as redaction_needles() orders them.
+            needles: vec![
+                ("C:\\Users\\alice".to_string(), "%USERPROFILE%"),
+                ("alice".to_string(), "<user>"),
+            ],
+        };
+        write!(
+            w,
+            "Scan loop started; config at C:\\Users\\alice\\AppData\\Roaming\\app\\config.json (alice)"
+        )
+        .unwrap();
+
+        let out = String::from_utf8(w.inner).unwrap();
+        assert!(!out.contains("alice"), "username must be scrubbed: {out}");
+        assert!(out.contains("%USERPROFILE%\\AppData\\Roaming\\app\\config.json"));
+        assert!(out.contains("(<user>)"));
+    }
+
+    #[test]
+    fn no_needles_passes_through() {
+        let mut w = RedactingWriter {
+            inner: Vec::<u8>::new(),
+            needles: Vec::new(),
+        };
+        write!(w, "nothing to redact here").unwrap();
+        assert_eq!(
+            String::from_utf8(w.inner).unwrap(),
+            "nothing to redact here"
+        );
+    }
 }
