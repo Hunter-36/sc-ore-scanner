@@ -6,6 +6,13 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.5] - 2026-06-06
+
+### Fixed
+- Log lines written to `scanner.log` are now scrubbed of the user's Windows home
+  path and username (e.g. `C:\Users\<name>\…` → `%USERPROFILE%\…`), so the log
+  file users attach to bug reports no longer leaks that PII. (#60)
+
 ## [2.2.4] - 2026-06-06
 
 ### Fixed
