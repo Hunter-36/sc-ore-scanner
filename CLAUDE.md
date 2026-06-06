@@ -37,7 +37,12 @@ Read [`docs/architecture.md`](docs/architecture.md) for the full picture.
 - **Rust stable** for everything. On **this Windows machine, run cargo under
   `vcvars64`** (the MSVC linker isn't otherwise on PATH) — see the vcvars memory.
 - **Node: use `pnpm`** (not npm). Committed `pnpm-lock.yaml`.
-- **Python: use `uv`** — only needed for `scripts/fetch_prices.py`.
+- **Python: use `uv`** — only needed for `scripts/fetch_prices.py`. **Never invoke
+  bare `python`/`python3`/`py`** anywhere — not even a throwaway `python --version`
+  or a quick `python3 -c` calc. There's no Python on PATH on this Windows machine,
+  so bare invocations hit the App Execution Alias and pop up the Microsoft Store
+  "Python install manager". Always go through uv: `uv run python -c "..."`,
+  `uv run python scripts/fetch_prices.py`. (Applies to subagents/workflows too.)
 
 ## Common commands
 
