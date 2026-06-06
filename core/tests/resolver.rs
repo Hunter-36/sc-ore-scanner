@@ -127,7 +127,10 @@ fn fps_gems_are_flat_3000() {
         .filter(|o| o.context.iter().any(|c| c == "fps"))
         .collect();
     assert_eq!(fps.len(), 4, "expected 4 FPS gems");
-    assert!(fps.iter().all(|o| o.base_rs == 3000), "all FPS gems base 3000");
+    assert!(
+        fps.iter().all(|o| o.base_rs == 3000),
+        "all FPS gems base 3000"
+    );
     for name in ["Hadanite", "Dolivine", "Aphorite", "Janalite"] {
         assert!(fps.iter().any(|o| o.name == name), "FPS gem {name} present");
     }
@@ -144,7 +147,10 @@ fn ground_vehicle_deposits_are_4000() {
     assert_eq!(gv.len(), 3, "expected 3 ground-vehicle deposits");
     assert!(gv.iter().all(|o| o.base_rs == 4000));
     for name in ["Beradom", "Feynmaline", "Glacosite"] {
-        assert!(gv.iter().any(|o| o.name == name), "ROC deposit {name} present");
+        assert!(
+            gv.iter().any(|o| o.name == name),
+            "ROC deposit {name} present"
+        );
     }
 }
 
