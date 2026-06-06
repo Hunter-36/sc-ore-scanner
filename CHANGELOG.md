@@ -1,6 +1,7 @@
 # Changelog
 
-All notable changes to SC Ore Scanner. This project follows
+All notable changes to SC Ore Scanner. The format is based on
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project follows
 [Semantic Versioning](https://semver.org/) and
 [Conventional Commits](https://www.conventionalcommits.org/). Each GitHub Release
 also has an auto-generated, per-PR "What's Changed" list; this file is the
@@ -42,6 +43,7 @@ curated, human-readable summary.
   size cap, so a hung or oversized feed can no longer stall the overlay (the
   fetch runs on the scan thread at startup and hourly). Last-good prices are
   still kept on any failure. (#67)
+
 ## [2.2.3] - 2026-06-06
 
 ### Fixed
@@ -79,6 +81,14 @@ curated, human-readable summary.
 - The debouncer updates its frame count in place, so changing "confirm frames"
   while watching a rock doesn't drop the currently-shown ore.
 
+## [2.1.2] - 2026-06-05
+
+### Security
+- Set a strict Content-Security-Policy for the overlay webview. (#52)
+
+### Changed
+- Added resolver/config unit tests, a CI dependency-audit job, and this changelog. (#51)
+
 ## [2.1.1] - 2026-06-05
 
 ### Changed
@@ -110,7 +120,16 @@ v1 was a Python/FastAPI backend + Tauri overlay over a local WebSocket. See the
 [GitHub Releases](https://github.com/Hunter-36/sc-ore-scanner/releases) for the
 full v1 history.
 
+[2.2.8]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.8
+[2.2.7]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.7
+[2.2.6]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.6
+[2.2.5]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.5
+[2.2.4]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.4
+[2.2.3]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.3
+[2.2.2]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.2
+[2.2.1]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.1
 [2.2.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.0
+[2.1.2]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.1.2
 [2.1.1]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.1.1
 [2.1.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.1.0
 [2.0.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.0.0

@@ -20,7 +20,8 @@ Prerequisites: Node 18+, [`pnpm`](https://pnpm.io/), Rust (on Windows, build und
 ```bash
 pnpm install
 pnpm tauri dev      # run the app (Rust + React, hot reload on the UI)
-pnpm tauri build    # release exe + NSIS/MSI installers in src-tauri/target/release
+pnpm tauri build    # release exe in src-tauri/target/release;
+                    # NSIS/MSI installers under src-tauri/target/release/bundle/{nsis,msi}
 pnpm typecheck
 pnpm test           # vitest (store)
 pnpm test:e2e       # Playwright (overlay + calibration)
@@ -32,7 +33,10 @@ The scan loop (`src-tauri/src/scan.rs`) emits a `scan-result` Tauri event each c
 `src/hooks/useScanEvents.ts` listens for it and updates the Zustand store
 (`src/store/useOreStore.ts`); `src/components/Overlay.tsx` renders one `OreCard` per
 ore, sorted by tier then quantity. `src/components/Calibrate.tsx` is the calibration
-window (opened from the overlay's "Set region" button).
+window (opened from the overlay's "Set region" button), and the overlay's **gear**
+button toggles `src/components/Settings.tsx` — an in-overlay panel that edits the
+runtime scan config (interval, confirm frames, upscale, CLAHE) live via `set_config`.
+The whole UI is wrapped in `src/components/ErrorBoundary.tsx` (mounted in `main.tsx`).
 
 > In a browser (vitest/Playwright) there's no Tauri runtime, so tests drive the store
 > via a dev-only `mock-scan` event and reach the calibration view via `?calibrate`.
@@ -43,10 +47,11 @@ window (opened from the overlay's "Set region" button).
 ```
 frontend/
 ├── src/
-│   ├── components/  Overlay.tsx, OreCard.tsx, Calibrate.tsx
+│   ├── components/  Overlay.tsx, OreCard.tsx, Settings.tsx, Calibrate.tsx, ErrorBoundary.tsx
 │   ├── hooks/       useScanEvents.ts  (Tauri scan-result listener)
 │   ├── store/       useOreStore.ts    (Zustand)
 │   ├── App.tsx      overlay vs. calibrate routing
+│   ├── main.tsx     React entry (mounts <App/> inside ErrorBoundary)
 │   └── App.css
 ├── src-tauri/
 │   └── src/         scan.rs (scan loop), main.rs (windows, calibration, quit, logging)

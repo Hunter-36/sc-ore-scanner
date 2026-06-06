@@ -45,7 +45,7 @@ Frontend / app (from `frontend/`):
 ```bash
 pnpm install
 pnpm tauri dev          # run the overlay app (Rust + React)
-pnpm tauri build        # release exe + NSIS/MSI installers in src-tauri/target/release
+pnpm tauri build        # release exe in src-tauri/target/release (installers under bundle/{nsis,msi})
 pnpm typecheck
 pnpm test               # vitest (store)
 pnpm test:e2e           # Playwright overlay display tests
@@ -86,8 +86,8 @@ capture primary monitor → crop to `scan_region` → upscale ×4 (Lanczos) →
 - **ocrs exposes no per-line confidence** (only chars + rects), so v1's confidence
   gate can't be ported; **debouncing** covers it.
 - **ocrs returns whole lines**, merging the RS value with the distance marker
-  (`"0 7,080 18.8km"`). `pipeline::extract_numbers` splits each line into number
-  tokens so the RS value is isolated. Don't revert to whole-line digit-stripping.
+  (`"0 7,080 18.8km"`). An internal `extract_numbers` helper splits each line into
+  number tokens so the RS value is isolated. Don't revert to whole-line digit-stripping.
 - **CLAHE is off by default.** It's implemented (matches cv2) but *regressed* ocrs
   detection at v1's clip=2.0, so `clahe_clip_limit` defaults to 0 (off). ocrs reads
   the raw upscaled text well; CLAHE is tunable for dark frames.
@@ -116,8 +116,11 @@ capture primary monitor → crop to `scan_region` → upscale ×4 (Lanczos) →
   the version bump must land **in the PR**.
 - **Conventional Commits** — `type(scope): summary` (`feat`, `fix`, `docs`,
   `refactor`, `test`, `chore`, `ci`, `perf`; `!`/`BREAKING CHANGE:` for breaking).
-- **SemVer**: `fix`/`docs`/`chore`/`refactor` → patch; `feat` → minor; breaking →
-  major. CI's `versions` job enforces consistency.
+- **SemVer tracks the shipped binary.** A change that doesn't alter the built app —
+  **docs, CI, repo meta, tests-only** — gets **no version bump and no release** (it
+  just merges; `release.yml` no-ops). Code changes bump: `fix`/`perf`/security →
+  patch; `feat` → minor; breaking → major. CI's `versions` job enforces consistency
+  when you do bump.
 - **Bump the version in all 3 places** (they must agree): `frontend/package.json`,
   `frontend/src-tauri/tauri.conf.json`, `frontend/src-tauri/Cargo.toml`.
 - Tests must pass before merge (`cargo test`, `pnpm typecheck && pnpm test`, Playwright).

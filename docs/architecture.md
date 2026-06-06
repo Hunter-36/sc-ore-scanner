@@ -29,7 +29,7 @@ pushed to the React overlay via a Tauri event. No separate backend, no WebSocket
 | `config.rs` | `Config` (scan region, interval, debounce frames, CLAHE) loaded/saved as JSON in the app config dir. |
 | `preprocess.rs` | Crop to the scan region, upscale ×4 (Lanczos), optional grayscale + CLAHE. |
 | `ocr.rs` | `Ocr` — the `ocrs` engine; detection/recognition `.rten` models embedded at build time (`build.rs`). |
-| `pipeline.rs` | `recognize_rs_numbers` (OCR → split each line into number tokens → keep 3–6 digit numbers in RS range) and `resolve_and_aggregate`. |
+| `pipeline.rs` | `recognize_rs_numbers` / `recognize_rs_numbers_from_processed` (OCR → split each line into number tokens via the internal `extract_numbers` helper → keep 3–6 digit numbers in RS range), `resolve_and_aggregate`, and the one-shot `detect_ores` (preprocess + recognize + resolve) used by the `validate` example and the e2e test. |
 | `debounce.rs` | `Debouncer` — confirm a number only after it appears in N consecutive frames. |
 | `resolver.rs` | `Resolver` — RS number → ore matches via division (`detected = base_rs × quantity`), with fuzzy tolerance and OCR-error correction. |
 | `signatures.rs` | Loads the embedded `core/data/signatures.json`. |
@@ -37,20 +37,49 @@ pushed to the React overlay via a Tauri event. No separate backend, no WebSocket
 
 ## The Tauri shell (`frontend/src-tauri/src/`)
 
-- `scan.rs` — the background scan loop: capture → preprocess → `recognize_rs_numbers`
-  → debounce → `resolve_and_aggregate` → `emit("scan-result")`. Also fetches prices.
+- `scan.rs` — the background scan loop: capture → preprocess →
+  `recognize_rs_numbers_from_processed` → debounce → `resolve_and_aggregate` →
+  `emit("scan-result")`. Also fetches prices.
 - `main.rs` — windows, first-run overlay placement, the calibration command
   (`open_calibration`, **async** — see gotchas), `save_scan_region`, `get_config`,
   `set_config`, `quit`, logging.
 
+## IPC reference
+
+The React overlay talks to the Rust shell over Tauri **commands** and one **event**.
+
+| Command (`#[tauri::command]`) | Args | Purpose |
+|---|---|---|
+| `open_calibration` | — | Open the full-screen calibration overlay (**async** — see gotchas). |
+| `save_scan_region` | `x, y, w, h` | Persist the calibrated region to `config.json` (rejects regions < 8 px). |
+| `get_config` | — | Return the current `Config` for the settings UI. |
+| `set_config` | `update` | Update the tunable subset (clamped, below); the scan loop hot-reloads it live. |
+| `quit` | — | Exit the app. |
+
+`set_config` clamps each tunable to the same ranges `Config::load` enforces (so a
+hand-edited `config.json` is sanitized too): `scan_interval_secs` **0.3–5.0**,
+`min_consecutive_frames` **1–6**, `upscale` **1–6**, `clahe_clip_limit` **0.0–8.0**.
+
+**Event `scan-result`** — emitted every cycle, payload `ScanResult`:
+
+- `ores`: map of ore name → `OreOut` `{ name, quantity, tier, tier_value, volatile,
+  confidence, detected_rs, unit_price?, alternatives[] }`
+- `scanner_active`: whether the OCR loop is running
+- `configured`: `false` until a scan region is calibrated (overlay prompts "Set region")
+
+`OreOut`/`ScanResult` (`scan.rs`) mirror `OreData`/`ScanResult` in
+`src/store/useOreStore.ts` — keep the two in sync.
+
 ## Data flow
 
 1. The scan thread loops every `scan_interval_secs` (default 0.75s).
-2. `capture_primary()` grabs the primary monitor (the one calibration targets).
+2. `resolve_primary_monitor()` picks the primary display (resolved once and cached
+   across cycles, re-resolved on a capture failure); `capture_region()` grabs the
+   calibrated region.
 3. The frame is cropped to `scan_region` and preprocessed.
-4. `ocrs` OCRs the crop; `pipeline::extract_numbers` splits each line into number
-   tokens (so the RS value isn't merged with the distance marker), filtered to 3–6
-   digit numbers in `valid_rs_min..max`.
+4. `ocrs` OCRs the crop; `recognize_rs_numbers_from_processed` splits each line into
+   number tokens (via the internal `extract_numbers` helper, so the RS value isn't
+   merged with the distance marker) and keeps 3–6 digit numbers in `valid_rs_min..max`.
 5. The `Debouncer` confirms numbers seen in `min_consecutive_frames` consecutive frames.
 6. `resolve_and_aggregate` maps each confirmed number to its best ore and keeps the
    best per ore.

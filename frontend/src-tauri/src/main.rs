@@ -48,7 +48,7 @@ async fn open_calibration(app: AppHandle) -> Result<(), String> {
     };
     log::info!("calibration window built");
 
-    // Cover the PRIMARY monitor — the same one capture_primary() scans — so the
+    // Cover the PRIMARY monitor — the same one the scan loop captures — so the
     // dragged box maps 1:1 to the capture, regardless of which monitor the
     // overlay window happens to live on.
     if let Ok(Some(m)) = win.primary_monitor() {

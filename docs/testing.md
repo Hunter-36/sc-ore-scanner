@@ -11,9 +11,13 @@ cargo run --example validate --release  # human-readable accuracy check on the f
 cargo fmt --check && cargo clippy -- -D warnings
 ```
 
-- **Unit** — `tests/resolver.rs` + `#[cfg(test)]` modules:
+- **Unit** — `core/tests/*.rs` integration tests + `#[cfg(test)]` modules:
   - `tests/resolver.rs`: division matching, sorting, confidence scaling, OCR-error
     correction, aggregation, quantity range, signature count.
+  - `tests/config.rs`: config load → mutate → save → load round-trip, plus clamping
+    and NaN/degenerate-region normalization (the `save_scan_region` path).
+  - `tests/prices.rs`: `PriceCache` feed fetch — timeout and response-size bounds, and
+    keeping the last-good cache on failure (hermetic, via a local TCP server).
   - `pipeline::tests`: `extract_numbers` (e.g. `"0 7,080 18.8km"` → `["0","7080","18","8"]`).
   - `debounce::tests`: confirm-after-N, streak reset on a gap, transient misread never confirms.
 - **OCR accuracy e2e** — `tests/e2e.rs`: crops each capture in `tests/fixtures/` to the
@@ -32,6 +36,7 @@ and extend the fixtures if accuracy shifts.
 
 ```bash
 pnpm test          # vitest — store logic (useOreStore)
+pnpm test:watch    # vitest in watch mode (local TDD loop)
 pnpm typecheck     # tsc --noEmit
 pnpm test:e2e      # Playwright — overlay display + calibration UI
 ```
@@ -46,5 +51,5 @@ There's no Tauri runtime in a browser, so the Playwright tests use two dev-only 
 ## CI
 
 `ci.yml` runs the core Rust tests (incl. the OCR e2e), the frontend typecheck + vitest,
-a Tauri `cargo check`, and the version-consistency check. `e2e.yml` runs Playwright.
-See [ci-cd.md](ci-cd.md).
+a Tauri `cargo check`, an advisory dependency `audit`, and the version-consistency
+check. `e2e.yml` runs Playwright. See [ci-cd.md](ci-cd.md).

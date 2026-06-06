@@ -8,9 +8,10 @@ Checks on every push and pull request.
 
 | Job | Runner | Steps |
 |---|---|---|
-| `core-tests` | ubuntu | `cargo fmt --check`; `cargo clippy -D warnings`; `cargo test --release` on `core` (unit + OCR accuracy e2e; `build.rs` fetches the ocrs models) |
+| `core-tests` | ubuntu | `cargo fmt --check`; `cargo clippy -- -D warnings`; `cargo test --release` on `core` (unit + OCR accuracy e2e; `build.rs` fetches the ocrs models) |
 | `frontend-unit` | ubuntu | pnpm install (frozen); `pnpm typecheck`; `pnpm test` (vitest) |
 | `tauri-check` | ubuntu | Tauri system libs; `cargo check` on `frontend/src-tauri` (with `rust-cache`) |
+| `audit` | ubuntu | Advisory `cargo audit` (core + app `Cargo.lock`) and `pnpm audit --prod`; `continue-on-error` — surfaces advisories without blocking merges |
 | `versions` | ubuntu | Fails if `package.json` / `tauri.conf.json` / `Cargo.toml` versions disagree |
 
 ## E2E — `e2e.yml`
@@ -23,8 +24,16 @@ Checks on every push and pull request.
 
 ## Prices — `prices.yml`
 
-Hourly cron that runs `scripts/fetch_prices.py` (the only Python left) to fetch the
-UEX commodity data and publish `prices.json` to GitHub Pages. The app reads that feed.
+Hourly cron (`0 * * * *`), also runnable manually via **Run workflow**
+(`workflow_dispatch`). It runs `scripts/fetch_prices.py` (the only Python left), which
+pulls UEX Corp commodity data from `https://api.uexcorp.uk/2.0/commodities`, filters it
+to the ores we detect, and writes `public/prices.json` (plus a small `public/index.html`
+price table). The `public/` dir is published to GitHub Pages; the app reads the feed
+from `DEFAULT_FEED_URL` (`https://hunter-36.github.io/sc-ore-scanner/prices.json`, in
+`core/src/prices.rs`).
+
+> UEX Corp's public API is hosted at `api.uexcorp.uk`; `uexcorp.space` is the project's
+> website (the attribution shown in-app and in the README). Both are UEX Corp.
 
 ## Release — `release.yml`
 
@@ -38,7 +47,8 @@ Builds the app + installers and publishes a GitHub Release **automatically on me
 - **`build-windows` job (windows, only if releasing):** `pnpm tauri build` (produces the
   exe + NSIS + MSI), then [`softprops/action-gh-release`](https://github.com/softprops/action-gh-release)
   tags the merge commit and publishes the release with three assets: the portable zip,
-  the NSIS `-setup.exe`, and the `.msi`.
+  the NSIS `-setup.exe`, and the `.msi`. The build **fails rather than publishing a
+  partial release** if any of those three artifacts is missing or empty.
 - Needs `contents: write` (granted); uses the default `GITHUB_TOKEN`.
 
 **To ship a release:** bump the version (below) in your PR. When it merges, the matching
@@ -46,8 +56,11 @@ Builds the app + installers and publishes a GitHub Release **automatically on me
 
 ## Versioning & commits
 
-- **[Semantic Versioning](https://semver.org/):** `fix`/`docs`/`chore`/`refactor`/security
-  → **patch**; backward-compatible `feat` → **minor**; breaking change → **major**.
+- **[Semantic Versioning](https://semver.org/) tracks the shipped app.** A change that
+  doesn't alter the built binary — **docs, CI, repo meta, tests-only** — gets **no
+  version bump and no release** (the `check` job no-ops). Code changes bump:
+  `fix`/`perf`/security → **patch**; backward-compatible `feat` → **minor**; breaking
+  change → **major**.
 - **[Conventional Commits](https://www.conventionalcommits.org/):** `type(scope): summary`
   (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`); `!` /
   `BREAKING CHANGE:` for breaking.

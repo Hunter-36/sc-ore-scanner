@@ -27,10 +27,21 @@ Then:
    seconds of looking at a radar signature. Quit with the **✕** in the overlay.
 
 > 💡 **Calibration tip:** leave a little margin around the RS readout so the number
-> stays inside the box. You can re-run **Set region** any time.
+> stays inside the box. Press **Esc** (or **Cancel**) to abort, and draw a box at
+> least ~20 px — a smaller one is ignored. You can re-run **Set region** any time.
 
 > ⚠️ Windows may show **"Windows protected your PC"** for this free, unsigned tool —
 > click **More info → Run anyway**.
+
+> ⚙️ **Tuning (Settings):** click the **gear** icon on the overlay for live sliders —
+> scan interval, confirm frames, upscale, and contrast (CLAHE) — plus **Responsive /
+> Balanced / Low-impact** presets and a "≈ Xs to confirm" estimate. Changes apply
+> immediately, no restart.
+
+> 🔎 **Reading a card:** the left border color is the ore tier (S/A/B/C); **⚠** marks
+> a volatile ore (Quantainium); **⇄ or …** means an ambiguous signature with other
+> equally-likely readings; a **~NN%** badge appears only when OCR confidence drops
+> below 90%.
 
 > 🛠️ Want to build it yourself or contribute? See [Development](#development-build-from-source).
 
@@ -68,6 +79,9 @@ comfortable with the current RSI
 - 🎯 **In-app calibration**: a full-screen drag-to-select overlay sets the scan region.
 - 🪟 **Transparent overlay**: always-on-top, color-coded by tier (S/A/B/C), with a
   ⚠ marker for volatile ores (Quantainium).
+- ⚙️ **Live tuning**: a Settings panel (gear icon) with sliders and **Responsive /
+  Balanced / Low-impact** presets to trade detection speed against CPU — applied
+  without a restart.
 - 💰 **Market price**: each ore's sell price per SCU in aUEC (UEX Corp — [live table](https://hunter-36.github.io/sc-ore-scanner/)).
 
 ## Development (build from source)
@@ -87,7 +101,8 @@ git clone https://github.com/Hunter-36/sc-ore-scanner.git
 cd sc-ore-scanner/frontend
 pnpm install
 pnpm tauri dev          # run the overlay app (Rust + React)
-pnpm tauri build        # release exe + NSIS/MSI installers in src-tauri/target/release
+pnpm tauri build        # release exe in src-tauri/target/release;
+                        # NSIS/MSI installers under src-tauri/target/release/bundle/{nsis,msi}
 ```
 
 The detection logic lives in the `core/` crate and can be worked on independently:
@@ -121,8 +136,8 @@ sc-ore-scanner/
 │   └── build.rs              # fetches + embeds the ocrs models
 │
 ├── frontend/                 # Tauri v2 + React overlay
-│   ├── src/                  # React UI (overlay, calibration, store)
-│   │   └── tests/e2e/        # Playwright display tests
+│   ├── src/                  # React UI (overlay, calibration, settings, store)
+│   ├── tests/e2e/            # Playwright display tests
 │   └── src-tauri/src/        # Rust shell: scan loop, windows, calibration, quit
 │
 ├── scripts/fetch_prices.py   # CI job: publish the UEX price feed to Pages
@@ -169,7 +184,7 @@ GitHub Actions (see [`docs/ci-cd.md`](docs/ci-cd.md)):
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| **CI** (`ci.yml`) | push / PR | `cargo fmt`/`clippy`/`test` (core, incl. OCR e2e), frontend typecheck + vitest, Tauri `cargo check`, version-consistency |
+| **CI** (`ci.yml`) | push / PR | `cargo fmt`/`clippy`/`test` (core, incl. OCR e2e), frontend typecheck + vitest, Tauri `cargo check`, version-consistency, advisory dependency `audit` |
 | **E2E** (`e2e.yml`) | push / PR | Playwright overlay display tests |
 | **Prices** (`prices.yml`) | hourly cron | refresh the UEX price feed published to GitHub Pages |
 | **Release** (`release.yml`) | merge to `master` with a new version | builds the app + NSIS/MSI installers and publishes a GitHub Release |
@@ -206,7 +221,7 @@ is also remembered across launches in `%APPDATA%\…\.window-state.json`).
 
 Signature data is current for **Star Citizen 4.7+**, from
 [MrKraken](https://robertsspaceindustries.com/community-hub/user/MrKraken)'s mining
-signature charts (31 ores + 7 asteroid types).
+signature charts (30 ores + 7 asteroid types).
 
 **S Tier:** Quantainium (3170, ⚠ volatile), Bexalite (3600), Hadanite (5415, FPS)
 **A Tier:** Stileron, Savrilium, Ouratite, Beryl, Taranite, Gold, Laranite, Aslarite, Agricium; Dolivine, Felinite (FPS)
