@@ -4,7 +4,7 @@ Real-time Star Citizen mining overlay. It reads the RS (Radar Signature) number 
 
 ![CI](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/ci.yml/badge.svg)
 ![E2E](https://github.com/Hunter-36/sc-ore-scanner/actions/workflows/e2e.yml/badge.svg)
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/github/v/release/Hunter-36/sc-ore-scanner?label=version&color=blue)
 ![Star Citizen](https://img.shields.io/badge/Star%20Citizen-4.7%2B-yellow)
 ![Tauri](https://img.shields.io/badge/tauri-2.0-orange)
 ![Rust](https://img.shields.io/badge/rust-stable-orange)
