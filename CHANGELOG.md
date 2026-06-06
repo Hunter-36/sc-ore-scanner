@@ -7,6 +7,19 @@ All notable changes to SC Ore Scanner. The format is based on
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.11] - 2026-06-06
+
+### Changed
+- The ore signature dataset is now **auto-sourced from the Star Citizen Wiki API** and
+  enriched with per-location spawn data. `core/data/signatures.json` stays the curated
+  source of base_rs/tier/volatile; `scripts/fetch_mineables.py` attaches each ore's harvest
+  locations + spawn probability (via the Wiki API) into `core/data/mineables.json`, which
+  the app now loads at startup from the published feed (`mineables.json` on GitHub Pages),
+  with an on-disk cache and the embedded copy as offline fallbacks — so ore data can refresh
+  per game patch without an app update. Detection behaviour is unchanged; the location data
+  is surfaced in a later release. The `Prices` workflow is now the combined **`Feeds`**
+  workflow (prices hourly, mineables daily). (#22)
+
 ## [2.2.10] - 2026-06-06
 
 ### Fixed
@@ -139,6 +152,7 @@ v1 was a Python/FastAPI backend + Tauri overlay over a local WebSocket. See the
 [GitHub Releases](https://github.com/Hunter-36/sc-ore-scanner/releases) for the
 full v1 history.
 
+[2.2.11]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.11
 [2.2.10]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.10
 [2.2.9]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.9
 [2.2.8]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.8

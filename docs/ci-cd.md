@@ -22,18 +22,29 @@ Checks on every push and pull request.
 
 (The OCR accuracy e2e is in the Rust `core-tests` job above.)
 
-## Prices — `prices.yml`
+## Feeds — `feeds.yml`
 
-Hourly cron (`0 * * * *`), also runnable manually via **Run workflow**
-(`workflow_dispatch`). It runs `scripts/fetch_prices.py` (the only Python left), which
-pulls UEX Corp commodity data from `https://api.uexcorp.uk/2.0/commodities`, filters it
-to the ores we detect, and writes `public/prices.json` (plus a small `public/index.html`
-price table). The `public/` dir is published to GitHub Pages; the app reads the feed
-from `DEFAULT_FEED_URL` (`https://hunter-36.github.io/sc-ore-scanner/prices.json`, in
-`core/src/prices.rs`).
+Builds the two data feeds the app fetches at runtime and publishes both to GitHub Pages in
+a single deploy (Pages serves one artifact as the whole site, so each deploy must contain
+both files — that's why it's one workflow). Hourly + daily cron + manual **Run workflow**:
+
+- **`prices.json`** (every run) — `scripts/fetch_prices.py` pulls UEX Corp commodity data
+  from `https://api.uexcorp.uk/2.0/commodities`, filters to the ores we detect, and writes
+  `public/prices.json` (+ a small `public/index.html` price table). The app reads it from
+  `DEFAULT_FEED_URL` (`core/src/prices.rs`) hourly — prices drift with the market.
+- **`mineables.json`** (rebuilt **daily** + on manual dispatch; carried over unchanged on
+  hourly runs) — `scripts/fetch_mineables.py` enriches the curated `core/data/signatures.json`
+  with per-location spawn data from the Star Citizen Wiki API and writes `public/mineables.json`
+  (and the embedded `core/data/mineables.json`). The app reads it from `DEFAULT_MINEABLES_URL`
+  (`core/src/mineables.rs`) **once at startup**, with an on-disk cache and the embedded copy
+  as fallbacks. Only daily because it changes per game patch and the wiki API is a community
+  resource.
 
 > UEX Corp's public API is hosted at `api.uexcorp.uk`; `uexcorp.space` is the project's
 > website (the attribution shown in-app and in the README). Both are UEX Corp.
+> The mineables dataset's signature/tier/volatile values stay hand-curated in
+> `core/data/signatures.json` (+ the `api_slug` map in `mineables-curation.json`); the
+> generator only attaches the API's locations + spawn probabilities.
 
 ## Release — `release.yml`
 

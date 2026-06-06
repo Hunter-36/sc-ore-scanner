@@ -22,15 +22,21 @@ Read [`docs/architecture.md`](docs/architecture.md) for the full picture.
 - **`core/`** — `scanner-core`, the detection library (no UI). Modules: `config`,
   `preprocess` (crop/upscale/CLAHE), `ocr` (ocrs, models embedded via `build.rs`),
   `pipeline` (OCR → number extraction → resolve/aggregate), `debounce`, `resolver`
-  (RS → ore, division match + OCR-error correction), `signatures` (embedded
-  `core/data/signatures.json`), `prices` (UEX feed). Tests in `core/tests/`,
-  fixtures in `core/tests/fixtures/`.
+  (RS → ore, division match + OCR-error correction), `signatures` (ore data +
+  per-location spawn data; embeds the generated `core/data/mineables.json`),
+  `mineables` (fetches that dataset from the Pages feed at startup; cache + embedded
+  fallback), `prices` (UEX feed). Tests in `core/tests/`, fixtures in `core/tests/fixtures/`.
 - **`frontend/`** — Tauri v2 app. `src/` is the React overlay; `src-tauri/src/`
   is the Rust shell: `scan.rs` (capture → detect → emit loop) and `main.rs`
   (windows, calibration, quit, logging). Depends on `scanner-core` by path.
-- **`scripts/fetch_prices.py`** — the only Python left: a CI data job that fetches
-  the UEX feed and publishes `prices.json` to GitHub Pages (see `prices.yml`). Not
-  part of the app.
+- **Ore data:** `core/data/signatures.json` is the **hand-curated source** (base_rs,
+  tier, volatile per ore). `scripts/fetch_mineables.py` enriches it with per-location
+  spawn data from the Star Citizen Wiki API (via the `api_slug` map in
+  `mineables-curation.json`) → `core/data/mineables.json` (the embedded/fetched dataset).
+  Edit signatures.json then regenerate: `uv run scripts/fetch_mineables.py`.
+- **`scripts/`** (Python, run with `uv`): `fetch_prices.py` (UEX prices) and
+  `fetch_mineables.py` (Wiki-API ore dataset) — CI data jobs (see `feeds.yml`) that
+  publish to GitHub Pages. Not part of the app binary.
 
 ## Toolchain
 

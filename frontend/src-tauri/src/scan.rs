@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 use scanner_core::{
     config::Config,
     debounce::Debouncer,
+    mineables,
     ocr::Ocr,
     pipeline::{recognize_rs_numbers_from_processed, resolve_and_aggregate},
     preprocess::preprocess_for_ocr,
@@ -101,7 +102,22 @@ pub fn start(app: AppHandle) {
             }
         };
         log::info!("OCR engine ready.");
-        let resolver = Resolver::new();
+
+        // App config dir holds config.json and the cached mineables dataset.
+        let app_dir = app.path().app_config_dir().ok();
+        let config_path = app_dir
+            .as_ref()
+            .map(|d| d.join("config.json"))
+            .unwrap_or_else(|| PathBuf::from("config.json"));
+        let mineables_cache = app_dir.as_ref().map(|d| d.join("mineables.json"));
+
+        // Mineables dataset (signatures + per-location spawn data): prefer the live feed,
+        // fall back to the on-disk cache, then the embedded copy. Loaded once — it changes
+        // per game patch, not per scan.
+        let (sigs, src) =
+            mineables::load(mineables::DEFAULT_MINEABLES_URL, mineables_cache.as_deref());
+        log::info!("Loaded {} mineables ({}).", sigs.len(), src.as_str());
+        let resolver = Resolver::from_signatures(sigs);
 
         let mut prices = PriceCache::new(DEFAULT_FEED_URL);
         match prices.refresh() {
@@ -109,12 +125,6 @@ pub fn start(app: AppHandle) {
             Err(e) => log::warn!("price feed unavailable ({e}); cards will omit price."),
         }
         let mut last_price_refresh = Instant::now();
-
-        let config_path = app
-            .path()
-            .app_config_dir()
-            .map(|d| d.join("config.json"))
-            .unwrap_or_else(|_| PathBuf::from("config.json"));
         log::info!("Scan loop started; config at {}", config_path.display());
 
         // Debounce raw RS numbers: a number must appear in N consecutive frames

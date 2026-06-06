@@ -185,6 +185,29 @@ fn vehicle_4000_collides_with_itype_asteroid() {
 }
 
 #[test]
+fn embedded_dataset_carries_locations() {
+    // The embedded mineables.json is enriched with Wiki-API harvest data.
+    let r = Resolver::new();
+    let hadanite = r
+        .signatures()
+        .iter()
+        .find(|o| o.id == "hadanite")
+        .expect("hadanite present");
+    assert!(
+        !hadanite.locations.is_empty(),
+        "FPS gems should carry harvest locations"
+    );
+    assert!(hadanite.locations.iter().any(|l| l.body == "Cellin"));
+    // Asteroid-type signatures aren't Wiki commodities, so they carry no locations.
+    let itype = r
+        .signatures()
+        .iter()
+        .find(|o| o.id == "asteroid_i_type")
+        .expect("I-Type asteroid present");
+    assert!(itype.locations.is_empty());
+}
+
+#[test]
 fn config_matches_v1_defaults() {
     let cfg = Resolver::new().config().clone();
     assert_eq!(cfg.valid_rs_min, 100);
