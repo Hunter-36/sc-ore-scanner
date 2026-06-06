@@ -1,7 +1,7 @@
 {
   "name": "sc-ore-scanner",
   "private": true,
-  "version": "2.2.5",
+  "version": "2.2.6",
   "type": "module",
   "packageManager": "pnpm@10.24.0",
   "scripts": {

@@ -48,16 +48,26 @@ struct ScanResult {
     configured: bool,
 }
 
-/// Capture the calibrated `region` of the primary monitor as RGB. The full frame
-/// is grabbed (xcap), but only the region's pixels are converted to RGB — a 4K
-/// grab is ~33 MB while the scan region is a few thousand pixels.
-pub fn capture_region(region: [u32; 4]) -> anyhow::Result<image::RgbImage> {
+/// Enumerate displays and pick the primary (falling back to the first). This
+/// hits platform display APIs, so the scan loop resolves it once and caches the
+/// result, re-resolving only on a capture failure (see `start`).
+pub fn resolve_primary_monitor() -> anyhow::Result<xcap::Monitor> {
     let monitors = xcap::Monitor::all()?;
-    let monitor = monitors
-        .iter()
-        .find(|m| m.is_primary())
-        .or_else(|| monitors.first())
-        .ok_or_else(|| anyhow::anyhow!("no monitor found"))?;
+    // Keep the is_primary selection; take the owned monitor at that index.
+    let idx = monitors.iter().position(|m| m.is_primary()).unwrap_or(0);
+    monitors
+        .into_iter()
+        .nth(idx)
+        .ok_or_else(|| anyhow::anyhow!("no monitor found"))
+}
+
+/// Capture the calibrated `region` of `monitor` as RGB. The full frame is grabbed
+/// (xcap), but only the region's pixels are converted to RGB — a 4K grab is
+/// ~33 MB while the scan region is a few thousand pixels.
+pub fn capture_region(
+    monitor: &xcap::Monitor,
+    region: [u32; 4],
+) -> anyhow::Result<image::RgbImage> {
     let rgba = monitor.capture_image()?;
     let (fw, fh) = (rgba.width(), rgba.height());
     Ok(scanner_core::preprocess::crop_rgba_to_rgb(
@@ -116,6 +126,11 @@ pub fn start(app: AppHandle) {
         let mut last_region: Option<Option<[u32; 4]>> = None;
         let mut last_summary = String::new();
 
+        // Cache the primary monitor across cycles — enumerating displays every
+        // ~0.75s frame is needless. Cleared on a capture failure so a monitor
+        // hot-plug / resolution change is picked up on the next cycle.
+        let mut monitor: Option<xcap::Monitor> = None;
+
         loop {
             let cfg = Config::load(&config_path);
             let interval = Duration::from_secs_f64(cfg.scan_interval_secs.max(0.2));
@@ -171,106 +186,126 @@ pub fn start(app: AppHandle) {
                             },
                         );
                     }
-                    Some(region) => match capture_region(region) {
-                        Ok(img) => {
-                            // Already cropped to the region, so just upscale (+CLAHE).
-                            let processed = preprocess_for_ocr(
-                                &img,
-                                None,
-                                cfg.upscale,
-                                cfg.clahe_clip_limit,
-                                cfg.clahe_grid,
-                            );
-
-                            match recognize_rs_numbers_from_processed(&processed, &ocr, &resolver) {
-                                Ok(candidates) => {
-                                    // Debounce, then resolve only the confirmed numbers.
-                                    debouncer.update(&candidates);
-                                    let confirmed = debouncer.confirmed();
-                                    let agg = resolve_and_aggregate(&confirmed, &resolver);
-
-                                    // Log only when the detected set changes.
-                                    let mut names: Vec<String> = agg
-                                        .values()
-                                        .map(|m| {
-                                            let alt = if m.alternatives.is_empty() {
-                                                String::new()
-                                            } else {
-                                                format!(" [or {}]", m.alternatives.join(", "))
-                                            };
-                                            format!(
-                                                "{}x {} (rs {}){}",
-                                                m.quantity, m.ore.name, m.detected_rs, alt
-                                            )
-                                        })
-                                        .collect();
-                                    names.sort();
-                                    let summary = if names.is_empty() {
-                                        "no ores in view".to_string()
-                                    } else {
-                                        names.join(", ")
-                                    };
-                                    if summary != last_summary {
-                                        log::info!("Detected: {summary}");
-                                        last_summary = summary;
-                                    }
-
-                                    let ores: HashMap<String, OreOut> = agg
-                                        .into_iter()
-                                        .map(|(id, m)| {
-                                            let unit_price = prices.sell_price(&id);
-                                            (
-                                                id,
-                                                OreOut {
-                                                    name: m.ore.name,
-                                                    quantity: m.quantity,
-                                                    tier: m.ore.tier,
-                                                    tier_value: m.ore.tier_value,
-                                                    volatile: m.ore.volatile,
-                                                    confidence: (m.confidence * 100.0).round()
-                                                        / 100.0,
-                                                    detected_rs: m.detected_rs,
-                                                    unit_price,
-                                                    alternatives: m.alternatives,
-                                                },
-                                            )
-                                        })
-                                        .collect();
-                                    let _ = app.emit(
-                                        "scan-result",
-                                        ScanResult {
-                                            ores,
-                                            scanner_active: true,
-                                            configured: true,
-                                        },
-                                    );
+                    Some(region) => {
+                        // Reuse the cached primary monitor; resolve + cache it if
+                        // absent (first cycle, or after a prior capture failure).
+                        let captured = match monitor.as_ref() {
+                            Some(m) => capture_region(m, region),
+                            None => match resolve_primary_monitor() {
+                                Ok(m) => {
+                                    let r = capture_region(&m, region);
+                                    monitor = Some(m);
+                                    r
                                 }
-                                Err(e) => {
-                                    // An error frame is a miss, not a skipped
-                                    // frame: feed an empty result so a transient
-                                    // error between two good reads breaks the
-                                    // streak instead of letting them count as
-                                    // consecutive (faithful to v1).
-                                    debouncer.update(&[]);
-                                    let msg = format!("ocr error: {e}");
-                                    if msg != last_summary {
-                                        log::error!("{msg}");
-                                        last_summary = msg;
+                                Err(e) => Err(e),
+                            },
+                        };
+                        match captured {
+                            Ok(img) => {
+                                // Already cropped to the region, so just upscale (+CLAHE).
+                                let processed = preprocess_for_ocr(
+                                    &img,
+                                    None,
+                                    cfg.upscale,
+                                    cfg.clahe_clip_limit,
+                                    cfg.clahe_grid,
+                                );
+
+                                match recognize_rs_numbers_from_processed(
+                                    &processed, &ocr, &resolver,
+                                ) {
+                                    Ok(candidates) => {
+                                        // Debounce, then resolve only the confirmed numbers.
+                                        debouncer.update(&candidates);
+                                        let confirmed = debouncer.confirmed();
+                                        let agg = resolve_and_aggregate(&confirmed, &resolver);
+
+                                        // Log only when the detected set changes.
+                                        let mut names: Vec<String> = agg
+                                            .values()
+                                            .map(|m| {
+                                                let alt = if m.alternatives.is_empty() {
+                                                    String::new()
+                                                } else {
+                                                    format!(" [or {}]", m.alternatives.join(", "))
+                                                };
+                                                format!(
+                                                    "{}x {} (rs {}){}",
+                                                    m.quantity, m.ore.name, m.detected_rs, alt
+                                                )
+                                            })
+                                            .collect();
+                                        names.sort();
+                                        let summary = if names.is_empty() {
+                                            "no ores in view".to_string()
+                                        } else {
+                                            names.join(", ")
+                                        };
+                                        if summary != last_summary {
+                                            log::info!("Detected: {summary}");
+                                            last_summary = summary;
+                                        }
+
+                                        let ores: HashMap<String, OreOut> = agg
+                                            .into_iter()
+                                            .map(|(id, m)| {
+                                                let unit_price = prices.sell_price(&id);
+                                                (
+                                                    id,
+                                                    OreOut {
+                                                        name: m.ore.name,
+                                                        quantity: m.quantity,
+                                                        tier: m.ore.tier,
+                                                        tier_value: m.ore.tier_value,
+                                                        volatile: m.ore.volatile,
+                                                        confidence: (m.confidence * 100.0).round()
+                                                            / 100.0,
+                                                        detected_rs: m.detected_rs,
+                                                        unit_price,
+                                                        alternatives: m.alternatives,
+                                                    },
+                                                )
+                                            })
+                                            .collect();
+                                        let _ = app.emit(
+                                            "scan-result",
+                                            ScanResult {
+                                                ores,
+                                                scanner_active: true,
+                                                configured: true,
+                                            },
+                                        );
+                                    }
+                                    Err(e) => {
+                                        // An error frame is a miss, not a skipped
+                                        // frame: feed an empty result so a transient
+                                        // error between two good reads breaks the
+                                        // streak instead of letting them count as
+                                        // consecutive (faithful to v1).
+                                        debouncer.update(&[]);
+                                        let msg = format!("ocr error: {e}");
+                                        if msg != last_summary {
+                                            log::error!("{msg}");
+                                            last_summary = msg;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        Err(e) => {
-                            // Capture failure is a miss too (see the OCR-error
-                            // branch) — break the streak rather than skip.
-                            debouncer.update(&[]);
-                            let msg = format!("capture error: {e}");
-                            if msg != last_summary {
-                                log::error!("{msg}");
-                                last_summary = msg;
+                            Err(e) => {
+                                // Capture failure is a miss too (see the OCR-error
+                                // branch) — break the streak rather than skip. Drop the
+                                // cached monitor so a display change (hot-plug /
+                                // resolution) is re-resolved on the next cycle.
+                                monitor = None;
+                                debouncer.update(&[]);
+                                let msg = format!("capture error: {e}");
+                                if msg != last_summary {
+                                    log::error!("{msg}");
+                                    last_summary = msg;
+                                }
                             }
                         }
-                    },
+                    }
                 }
             });
             if !cycle_ok {

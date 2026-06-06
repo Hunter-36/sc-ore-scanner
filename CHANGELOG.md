@@ -6,6 +6,13 @@ All notable changes to SC Ore Scanner. This project follows
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.6] - 2026-06-06
+
+### Changed
+- The scan loop now resolves the primary monitor once and caches it, instead of
+  re-enumerating displays every frame (~0.75s). The cache is dropped on a capture
+  failure, so a monitor hot-plug / resolution change is still picked up. (#68)
+
 ## [2.2.5] - 2026-06-06
 
 ### Fixed
@@ -20,7 +27,6 @@ curated, human-readable summary.
   size cap, so a hung or oversized feed can no longer stall the overlay (the
   fetch runs on the scan thread at startup and hourly). Last-good prices are
   still kept on any failure. (#67)
-
 ## [2.2.3] - 2026-06-06
 
 ### Fixed
