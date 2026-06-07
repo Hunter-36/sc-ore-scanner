@@ -6,6 +6,7 @@ const initialState = {
   scannerActive: false,
   configured: false,
   connected: false,
+  emptyScans: 0,
 };
 
 const sampleScan: ScanResult = {
@@ -50,6 +51,41 @@ describe('useOreStore', () => {
     expect(useOreStore.getState().connected).toBe(true);
     useOreStore.getState().setConnected(false);
     expect(useOreStore.getState().connected).toBe(false);
+  });
+
+  it('lingers the last result through a brief empty gap, then clears', () => {
+    const emptyActive: ScanResult = { ores: {}, scanner_active: true, configured: true };
+    const store = useOreStore.getState();
+
+    store.updateFromScan(sampleScan);
+    expect(Object.keys(useOreStore.getState().ores)).toEqual(['beryl']);
+
+    // First couple of empty scans hold the card (OCR jitter / dropped frame).
+    store.updateFromScan(emptyActive);
+    expect(Object.keys(useOreStore.getState().ores)).toEqual(['beryl']);
+    store.updateFromScan(emptyActive);
+    expect(Object.keys(useOreStore.getState().ores)).toEqual(['beryl']);
+
+    // Past the linger window it finally clears.
+    store.updateFromScan(emptyActive);
+    expect(useOreStore.getState().ores).toEqual({});
+  });
+
+  it('a fresh detection resets the linger counter', () => {
+    const emptyActive: ScanResult = { ores: {}, scanner_active: true, configured: true };
+    const store = useOreStore.getState();
+    store.updateFromScan(sampleScan);
+    store.updateFromScan(emptyActive); // 1 miss
+    store.updateFromScan(sampleScan); // detection -> reset
+    store.updateFromScan(emptyActive); // 1 miss again, still lingering
+    expect(Object.keys(useOreStore.getState().ores)).toEqual(['beryl']);
+  });
+
+  it('clears immediately on an empty scan when not configured (no region)', () => {
+    const store = useOreStore.getState();
+    store.updateFromScan(sampleScan);
+    store.updateFromScan({ ores: {}, scanner_active: false, configured: false });
+    expect(useOreStore.getState().ores).toEqual({});
   });
 
   it('preserves candidates + group_label for a degenerate (ambiguous) reading', () => {
