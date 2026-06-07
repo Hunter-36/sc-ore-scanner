@@ -12,6 +12,7 @@ fn round_trip_preserves_all_fields() {
         min_consecutive_frames: 2,
         clahe_clip_limit: 2.0,
         clahe_grid: [4, 4],
+        mining_location: Some("Cellin".to_string()),
     };
 
     let path = std::env::temp_dir().join(format!("sc_ore_cfg_{}.json", std::process::id()));
@@ -25,6 +26,7 @@ fn round_trip_preserves_all_fields() {
     assert_eq!(loaded.min_consecutive_frames, 2);
     assert_eq!(loaded.clahe_clip_limit, 2.0);
     assert_eq!(loaded.clahe_grid, [4, 4]);
+    assert_eq!(loaded.mining_location.as_deref(), Some("Cellin"));
 }
 
 #[test]

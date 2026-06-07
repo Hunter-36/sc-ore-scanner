@@ -3526,7 +3526,7 @@ dependencies = [
 
 [[package]]
 name = "sc-ore-scanner"
-version = "2.2.11"
+version = "2.3.0"
 dependencies = [
  "anyhow",
  "image",

@@ -7,6 +7,18 @@ All notable changes to SC Ore Scanner. The format is based on
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.3.0] - 2026-06-07
+
+### Added
+- **Per-candidate display for ambiguous signatures + a location picker.** Signature-
+  degenerate readings (where the RS can't identify the ore — e.g. all FPS hand-gems share
+  3000, all ROC deposits 4000) now show every possibility on one card with each one's
+  value, instead of arbitrarily naming one. Set your **mining location** in Settings
+  (gear → Location) and the candidates are ranked by their per-body **spawn probability**
+  (e.g. on Cellin a 3000 read is 59% Aphorite / 35% Dolivine / 6% Hadanite; gems that
+  don't spawn there are dropped). Uses the per-location data shipped in 2.2.11; no
+  location set = candidates shown by value. (#22)
+
 ## [2.2.11] - 2026-06-06
 
 ### Changed
@@ -152,6 +164,7 @@ v1 was a Python/FastAPI backend + Tauri overlay over a local WebSocket. See the
 [GitHub Releases](https://github.com/Hunter-36/sc-ore-scanner/releases) for the
 full v1 history.
 
+[2.3.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.3.0
 [2.2.11]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.11
 [2.2.10]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.10
 [2.2.9]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.9

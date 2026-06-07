@@ -6,6 +6,13 @@ export interface Cfg {
   min_consecutive_frames: number;
   upscale: number;
   clahe_clip_limit: number;
+  mining_location?: string | null;
+}
+
+/** A mining body for the location picker (from the get_mining_locations command). */
+interface MiningLocation {
+  system: string;
+  body: string;
 }
 
 const DEFAULTS: Cfg = {
@@ -13,6 +20,7 @@ const DEFAULTS: Cfg = {
   min_consecutive_frames: 3,
   upscale: 4,
   clahe_clip_limit: 0,
+  mining_location: null,
 };
 
 type PresetKey = 'Responsive' | 'Balanced' | 'Low-impact';
@@ -31,6 +39,7 @@ async function loadConfig(): Promise<Cfg> {
       min_consecutive_frames: c.min_consecutive_frames ?? DEFAULTS.min_consecutive_frames,
       upscale: c.upscale ?? DEFAULTS.upscale,
       clahe_clip_limit: c.clahe_clip_limit ?? DEFAULTS.clahe_clip_limit,
+      mining_location: c.mining_location ?? null,
     };
   } catch {
     return DEFAULTS;
@@ -67,9 +76,22 @@ export function Settings({ onClose }: { onClose: () => void }) {
   const saveTimer = useRef<number | undefined>(undefined);
   // Latest cfg, readable from the unmount cleanup without making it a dep.
   const latestCfg = useRef<Cfg | null>(null);
+  const [locations, setLocations] = useState<MiningLocation[]>([]);
 
   useEffect(() => {
     loadConfig().then(setCfg);
+  }, []);
+
+  // Body list for the location picker (from the mineables dataset).
+  useEffect(() => {
+    (async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        setLocations(await invoke<MiningLocation[]>('get_mining_locations'));
+      } catch {
+        /* not in Tauri / no backend — leave empty; the dropdown shows "Any" only */
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -197,6 +219,34 @@ export function Settings({ onClose }: { onClose: () => void }) {
           onChange={(e) => update({ clahe_clip_limit: parseFloat(e.target.value) })}
         />
         <span className="settings-hint">0 = off (recommended); can hurt detection — only for very dark HUDs</span>
+      </label>
+
+      <label className="settings-field">
+        <span>
+          Location <b>{cfg.mining_location ?? 'any'}</b>
+        </span>
+        <select
+          className="settings-select"
+          value={cfg.mining_location ?? ''}
+          onChange={(e) => update({ mining_location: e.target.value || null })}
+        >
+          <option value="">Any (no location ranking)</option>
+          {Object.entries(
+            locations.reduce<Record<string, string[]>>((acc, l) => {
+              (acc[l.system] ??= []).push(l.body);
+              return acc;
+            }, {}),
+          ).map(([system, bodies]) => (
+            <optgroup key={system} label={system}>
+              {bodies.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <span className="settings-hint">ranks ambiguous gems by their spawn chance here</span>
       </label>
 
       {saveError && (

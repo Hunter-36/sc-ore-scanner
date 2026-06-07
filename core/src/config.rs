@@ -24,6 +24,10 @@ pub struct Config {
     /// CLAHE tile grid [cols, rows].
     #[serde(default = "default_clahe_grid")]
     pub clahe_grid: [u32; 2],
+    /// Body the user is mining at (e.g. "Cellin"). When set, ambiguous candidates are
+    /// ranked/filtered by per-location spawn probability. None = no location filtering.
+    #[serde(default)]
+    pub mining_location: Option<String>,
 }
 
 fn default_interval() -> f64 {
@@ -53,6 +57,7 @@ impl Default for Config {
             min_consecutive_frames: default_min_frames(),
             clahe_clip_limit: default_clahe_clip(),
             clahe_grid: default_clahe_grid(),
+            mining_location: None,
         }
     }
 }
