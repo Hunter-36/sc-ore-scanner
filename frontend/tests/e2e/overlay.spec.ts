@@ -17,6 +17,16 @@ type Ore = {
   detected_rs: number;
   unit_price?: number | null;
   alternatives?: string[];
+  candidates?: Array<{
+    name: string;
+    quantity: number;
+    tier: string;
+    tier_value: number;
+    volatile: boolean;
+    unit_price?: number | null;
+    probability?: number | null;
+  }>;
+  group_label?: string | null;
 };
 
 type ScanResult = {
@@ -170,4 +180,33 @@ test('omits the price line when an ore has no known price', async ({ page }) => 
   const beryl = page.locator('.ore-card', { hasText: 'Beryl' });
   await expect(beryl).toBeVisible();
   await expect(beryl.locator('.ore-value')).toHaveCount(0);
+});
+
+test('renders a signature-degenerate reading as a grouped per-candidate card', async ({ page }) => {
+  await emitScan(page, {
+    ores: {
+      hadanite: {
+        name: 'Hadanite', quantity: 6, tier: 'S', tier_value: 4, volatile: false,
+        confidence: 1, detected_rs: 18000, group_label: 'Gem',
+        candidates: [
+          { name: 'Aphorite', quantity: 6, tier: 'B', tier_value: 2, volatile: false, unit_price: 110000, probability: 58.6 },
+          { name: 'Dolivine', quantity: 6, tier: 'A', tier_value: 3, volatile: false, unit_price: 160000, probability: 35.4 },
+          { name: 'Hadanite', quantity: 6, tier: 'S', tier_value: 4, volatile: false, unit_price: 600000, probability: 6 },
+        ],
+      },
+    },
+    scanner_active: true,
+  });
+
+  const group = page.locator('.ore-card-group');
+  await expect(group).toHaveCount(1);
+  await expect(group.locator('.ore-name')).toContainText('Gem');
+  await expect(group.locator('.ore-name')).toContainText('6x');
+  await expect(group.locator('.ore-sig')).toContainText('18000');
+
+  // One row per candidate, ranked by spawn probability (Aphorite 58.6% first).
+  const rows = group.locator('.candidate');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0).locator('.candidate-name')).toContainText('Aphorite');
+  await expect(rows.nth(0).locator('.candidate-prob')).toHaveText('59%');
 });

@@ -11,7 +11,7 @@ use scanner_core::{
     debounce::Debouncer,
     mineables,
     ocr::Ocr,
-    pipeline::{recognize_rs_numbers_from_processed, resolve_and_aggregate},
+    pipeline::{recognize_rs_numbers_from_processed, resolve_and_aggregate, Candidate},
     preprocess::preprocess_for_ocr,
     prices::{PriceCache, DEFAULT_FEED_URL},
     resolver::Resolver,
@@ -21,6 +21,20 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Re-fetch the price feed at most once an hour (it updates hourly upstream).
 const PRICE_REFRESH: Duration = Duration::from_secs(3600);
+
+#[derive(Serialize, Clone)]
+struct CandidateOut {
+    name: String,
+    quantity: i64,
+    tier: String,
+    tier_value: i64,
+    volatile: bool,
+    /// Sell price per SCU (aUEC), if the feed knows this ore.
+    unit_price: Option<i64>,
+    /// Spawn probability (%) at the active mining location, if one is set and this
+    /// ore has per-location data; null otherwise.
+    probability: Option<f64>,
+}
 
 #[derive(Serialize, Clone)]
 struct OreOut {
@@ -36,6 +50,13 @@ struct OreOut {
     /// Equally-likely alternative readings of the same RS (ambiguous signature),
     /// e.g. ["5x Aslarite"]; empty when unambiguous. Mirrors OreData.alternatives.
     alternatives: Vec<String>,
+    /// Every equally-likely reading (primary first), each with its value + spawn
+    /// probability. Length 1 when unambiguous; ≥2 for a signature-degenerate set the
+    /// RS can't disambiguate (e.g. FPS gems all = 3000). Mirrors OreData.candidates.
+    candidates: Vec<CandidateOut>,
+    /// A short category for a degenerate set (e.g. "Gem", "ROC deposit"), or null when
+    /// the candidates don't share one context.
+    group_label: Option<String>,
 }
 
 /// Emitted as the "scan-result" Tauri event. Mirrors `ScanResult` in
@@ -47,6 +68,32 @@ struct ScanResult {
     /// False until a scan region has been calibrated — lets the overlay prompt
     /// the user to set one instead of sitting on "Starting scanner…".
     configured: bool,
+}
+
+/// A short category for a signature-degenerate candidate set (≥2 readings the RS can't
+/// tell apart) when they all share a mining context; `None` otherwise.
+fn group_label(candidates: &[Candidate]) -> Option<String> {
+    if candidates.len() < 2 {
+        return None;
+    }
+    let first = candidates[0].ore.context.first()?;
+    if !candidates
+        .iter()
+        .all(|c| c.ore.context.first() == Some(first))
+    {
+        return None;
+    }
+    Some(
+        match first.as_str() {
+            "fps" => "Gem",
+            "vehicle" => "ROC deposit",
+            "ship" => "Ore",
+            "asteroid" => "Asteroid",
+            "salvage" => "Salvage",
+            _ => return None,
+        }
+        .to_string(),
+    )
 }
 
 /// Enumerate displays and pick the primary (falling back to the first). This
@@ -228,7 +275,11 @@ pub fn start(app: AppHandle) {
                                         // Debounce, then resolve only the confirmed numbers.
                                         debouncer.update(&candidates);
                                         let confirmed = debouncer.confirmed();
-                                        let agg = resolve_and_aggregate(&confirmed, &resolver);
+                                        let agg = resolve_and_aggregate(
+                                            &confirmed,
+                                            &resolver,
+                                            cfg.mining_location.as_deref(),
+                                        );
 
                                         // Log only when the detected set changes.
                                         let mut names: Vec<String> = agg
@@ -260,6 +311,20 @@ pub fn start(app: AppHandle) {
                                             .into_iter()
                                             .map(|(id, m)| {
                                                 let unit_price = prices.sell_price(&id);
+                                                let group_label = group_label(&m.candidates);
+                                                let candidates = m
+                                                    .candidates
+                                                    .iter()
+                                                    .map(|c| CandidateOut {
+                                                        name: c.ore.name.clone(),
+                                                        quantity: c.quantity,
+                                                        tier: c.ore.tier.clone(),
+                                                        tier_value: c.ore.tier_value,
+                                                        volatile: c.ore.volatile,
+                                                        unit_price: prices.sell_price(&c.ore.id),
+                                                        probability: c.probability,
+                                                    })
+                                                    .collect();
                                                 (
                                                     id,
                                                     OreOut {
@@ -273,6 +338,8 @@ pub fn start(app: AppHandle) {
                                                         detected_rs: m.detected_rs,
                                                         unit_price,
                                                         alternatives: m.alternatives,
+                                                        candidates,
+                                                        group_label,
                                                     },
                                                 )
                                             })

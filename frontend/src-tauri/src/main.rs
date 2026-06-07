@@ -28,24 +28,21 @@ async fn open_calibration(app: AppHandle) -> Result<(), String> {
     }
 
     log::info!("building calibration window…");
-    let win = match WebviewWindowBuilder::new(
-        &app,
-        "calibrate",
-        WebviewUrl::App("index.html".into()),
-    )
-    .title("Calibrate scan region")
-    .decorations(false)
-    .transparent(true)
-    .always_on_top(true)
-    .skip_taskbar(true)
-    .build()
-    {
-        Ok(w) => w,
-        Err(e) => {
-            log::error!("calibration window build failed: {e}");
-            return Err(e.to_string());
-        }
-    };
+    let win =
+        match WebviewWindowBuilder::new(&app, "calibrate", WebviewUrl::App("index.html".into()))
+            .title("Calibrate scan region")
+            .decorations(false)
+            .transparent(true)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .build()
+        {
+            Ok(w) => w,
+            Err(e) => {
+                log::error!("calibration window build failed: {e}");
+                return Err(e.to_string());
+            }
+        };
     log::info!("calibration window built");
 
     // Cover the PRIMARY monitor — the same one the scan loop captures — so the
@@ -56,7 +53,10 @@ async fn open_calibration(app: AppHandle) -> Result<(), String> {
         let s = m.size();
         log::info!(
             "calibration overlay -> primary monitor ({}, {}) {}x{}",
-            p.x, p.y, s.width, s.height
+            p.x,
+            p.y,
+            s.width,
+            s.height
         );
         let _ = win.set_position(PhysicalPosition::new(p.x, p.y));
         let _ = win.set_size(PhysicalSize::new(s.width, s.height));
@@ -77,7 +77,9 @@ fn save_scan_region(app: AppHandle, x: u32, y: u32, w: u32, h: u32) -> Result<()
     // detection silently fail. Require a sane minimum.
     const MIN: u32 = 8;
     if w < MIN || h < MIN {
-        return Err(format!("scan region too small ({w}x{h}); draw a larger box"));
+        return Err(format!(
+            "scan region too small ({w}x{h}); draw a larger box"
+        ));
     }
     let path = app
         .path()
@@ -121,6 +123,9 @@ struct SettingsUpdate {
     min_consecutive_frames: u32,
     upscale: u32,
     clahe_clip_limit: f64,
+    /// Selected mining body (or null = no location filtering). Sent by the UI.
+    #[serde(default)]
+    mining_location: Option<String>,
 }
 
 /// Update the tunable detection settings, clamped to sane ranges, preserving the
@@ -133,15 +138,39 @@ fn set_config(app: AppHandle, update: SettingsUpdate) -> Result<(), String> {
     cfg.min_consecutive_frames = update.min_consecutive_frames.clamp(1, 6);
     cfg.upscale = update.upscale.clamp(1, 6);
     cfg.clahe_clip_limit = update.clahe_clip_limit.clamp(0.0, 8.0);
+    cfg.mining_location = update.mining_location.filter(|s| !s.is_empty());
     cfg.save(&path).map_err(|e| e.to_string())?;
     log::info!(
-        "settings updated: interval={:.2}s frames={} upscale={} clahe={:.1}",
+        "settings updated: interval={:.2}s frames={} upscale={} clahe={:.1} location={:?}",
         cfg.scan_interval_secs,
         cfg.min_consecutive_frames,
         cfg.upscale,
-        cfg.clahe_clip_limit
+        cfg.clahe_clip_limit,
+        cfg.mining_location
     );
     Ok(())
+}
+
+#[derive(serde::Serialize)]
+struct MiningLocation {
+    system: String,
+    body: String,
+}
+
+/// Distinct mining bodies for the settings location picker, sorted by (system, body).
+#[tauri::command]
+fn get_mining_locations() -> Vec<MiningLocation> {
+    let mut set: std::collections::BTreeSet<(String, String)> = std::collections::BTreeSet::new();
+    for ore in scanner_core::signatures::load_signatures() {
+        for loc in ore.locations {
+            if !loc.body.is_empty() {
+                set.insert((loc.system, loc.body));
+            }
+        }
+    }
+    set.into_iter()
+        .map(|(system, body)| MiningLocation { system, body })
+        .collect()
 }
 
 /// Directory for the log file: `%APPDATA%\com.scorescanner.app\logs` (matches the
@@ -321,6 +350,7 @@ fn main() {
             save_scan_region,
             get_config,
             set_config,
+            get_mining_locations,
             quit
         ])
         .run(tauri::generate_context!())

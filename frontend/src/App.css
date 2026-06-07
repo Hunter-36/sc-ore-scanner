@@ -353,6 +353,48 @@ body {
   letter-spacing: 0.2px;
 }
 
+/* Signature-degenerate group card: each possible ore with its value + spawn %. */
+.ore-card-group .ore-sig {
+  font-size: 10px;
+  color: #7e98a3;
+  font-variant-numeric: tabular-nums;
+}
+.candidates {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.candidate {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.candidate-name {
+  font-weight: 600;
+}
+.candidate-meta {
+  display: flex;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.candidate-value {
+  color: #ffd54a;
+}
+.candidate-prob {
+  color: #4fd6e6;
+  min-width: 30px;
+  text-align: right;
+}
+.candidate-hint {
+  margin-top: 4px;
+  font-size: 10px;
+  font-style: italic;
+  color: #7e98a3;
+}
+
 /* Gear / icon button in the header */
 .icon-btn {
   display: flex;
@@ -441,6 +483,17 @@ body {
 .settings-field input[type='range'] {
   width: 100%;
   accent-color: #00ccff;
+  cursor: pointer;
+}
+
+.settings-select {
+  width: 100%;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #cfe6ee;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  font-size: 12px;
   cursor: pointer;
 }
 

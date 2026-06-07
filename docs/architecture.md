@@ -55,17 +55,22 @@ The React overlay talks to the Rust shell over Tauri **commands** and one **even
 | `open_calibration` | — | Open the full-screen calibration overlay (**async** — see gotchas). |
 | `save_scan_region` | `x, y, w, h` | Persist the calibrated region to `config.json` (rejects regions < 8 px). |
 | `get_config` | — | Return the current `Config` for the settings UI. |
-| `set_config` | `update` | Update the tunable subset (clamped, below); the scan loop hot-reloads it live. |
+| `set_config` | `update` | Update the tunable subset (clamped, below) + the mining location; the scan loop hot-reloads it live. |
+| `get_mining_locations` | — | Distinct mining bodies `{system, body}` (from the dataset) for the settings location picker. |
 | `quit` | — | Exit the app. |
 
 `set_config` clamps each tunable to the same ranges `Config::load` enforces (so a
 hand-edited `config.json` is sanitized too): `scan_interval_secs` **0.3–5.0**,
-`min_consecutive_frames` **1–6**, `upscale` **1–6**, `clahe_clip_limit` **0.0–8.0**.
+`min_consecutive_frames` **1–6**, `upscale` **1–6**, `clahe_clip_limit` **0.0–8.0**;
+`mining_location` is a free-form body name used to rank/filter ambiguous candidates (not clamped).
 
 **Event `scan-result`** — emitted every cycle, payload `ScanResult`:
 
 - `ores`: map of ore name → `OreOut` `{ name, quantity, tier, tier_value, volatile,
-  confidence, detected_rs, unit_price?, alternatives[] }`
+  confidence, detected_rs, unit_price?, alternatives[], candidates[], group_label? }`.
+  For a signature-degenerate reading (≥2 `candidates`, e.g. FPS gems all = 3000), each
+  candidate carries `{ name, quantity, tier, unit_price?, probability? }`; the overlay
+  shows the set ranked by per-location spawn `probability` when a `mining_location` is set.
 - `scanner_active`: whether the OCR loop is running
 - `configured`: `false` until a scan region is calibrated (overlay prompts "Set region")
 
