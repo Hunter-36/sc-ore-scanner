@@ -7,6 +7,18 @@ All notable changes to SC Ore Scanner. The format is based on
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.3.1] - 2026-06-07
+
+### Fixed
+- Settings sliders now reach the full range the backend accepts: scan interval up to
+  **5.0s** (was capped at 3.0) and contrast/CLAHE up to **8.0** (was 4.0), so those values
+  are reachable from the UI instead of only by hand-editing config.json. (#94)
+
+### Changed
+- CI: bumped the GitHub Actions off the deprecated Node-20 runtime (checkout v6,
+  setup-node v6, setup-python v6, pnpm/action-setup v6, softprops/action-gh-release v3,
+  upload-pages-artifact v5, deploy-pages v5).
+
 ## [2.3.0] - 2026-06-07
 
 ### Added
@@ -164,6 +176,7 @@ v1 was a Python/FastAPI backend + Tauri overlay over a local WebSocket. See the
 [GitHub Releases](https://github.com/Hunter-36/sc-ore-scanner/releases) for the
 full v1 history.
 
+[2.3.1]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.3.1
 [2.3.0]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.3.0
 [2.2.11]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.11
 [2.2.10]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.10
