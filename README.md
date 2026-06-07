@@ -78,8 +78,8 @@ comfortable with the current RSI
 - 🔍 **Pure-Rust OCR** (`ocrs`) reads the bright HUD digits; no ONNX runtime, no PyTorch.
 - 🧮 **RS resolution**: division-based matching with OCR-error correction
   (e.g. `10,620 ÷ 3,540 = 3 → 3× Beryl`).
-- 📊 **Debouncing**: a number must show for 3 consecutive frames before it's reported,
-  filtering transient misreads.
+- 📊 **Debouncing**: a number must show in a majority of recent frames (3 of the last 6
+  by default) before it's reported — filtering transient misreads while tolerating OCR jitter.
 - 🎯 **In-app calibration**: a full-screen drag-to-select overlay sets the scan region.
 - 🪟 **Transparent overlay**: always-on-top, color-coded by tier (S/A/B/C), with a
   ⚠ marker for volatile ores (Quantainium).
@@ -96,7 +96,8 @@ comfortable with the current RSI
 - **Rust** (stable) — for the app and the detection core
 - **Node 18+** and [`pnpm`](https://pnpm.io/) (`corepack enable pnpm`)
 - Windows (screen capture + the Tauri build)
-- *(Optional)* [`uv`](https://github.com/astral-sh/uv) — only for `scripts/fetch_prices.py`
+- *(Optional)* [`uv`](https://github.com/astral-sh/uv) — only for the CI data scripts
+  (`scripts/fetch_prices.py`, `scripts/fetch_mineables.py`); not needed to build/run the app
 
 ### Build & run
 
@@ -130,12 +131,14 @@ sc-ore-scanner/
 │   │   ├── preprocess.rs     # crop / upscale / CLAHE
 │   │   ├── ocr.rs            # ocrs engine (models embedded via build.rs)
 │   │   ├── pipeline.rs       # OCR -> number extraction -> resolve / aggregate
-│   │   ├── debounce.rs       # N-consecutive-frame confirmation
+│   │   ├── debounce.rs       # windowed frame confirmation (>=N of last 2N)
 │   │   ├── resolver.rs       # RS -> ore (division match + OCR-error correction)
-│   │   ├── signatures.rs     # embedded signature DB
+│   │   ├── signatures.rs     # embedded signature DB (mineables.json)
+│   │   ├── mineables.rs      # dataset loader: live feed -> cache -> embedded
 │   │   └── prices.rs         # UEX price feed
-│   ├── data/signatures.json  # ore signature database
-│   ├── tests/                # resolver/debounce/e2e tests
+│   ├── data/                 # signatures.json (curated source) + mineables.json
+│   │                         #   (generated, embedded) + mineables-curation.json
+│   ├── tests/                # resolver/debounce/config/prices/e2e tests
 │   │   └── fixtures/         # real scan captures
 │   └── build.rs              # fetches + embeds the ocrs models
 │
@@ -144,7 +147,8 @@ sc-ore-scanner/
 │   ├── tests/e2e/            # Playwright display tests
 │   └── src-tauri/src/        # Rust shell: scan loop, windows, calibration, quit
 │
-├── scripts/fetch_prices.py   # CI job: publish the UEX price feed to Pages
+├── scripts/                  # CI data jobs (run with uv): fetch_prices.py (UEX prices)
+│                             #   + fetch_mineables.py (Wiki-API mineables dataset)
 ├── .github/workflows/        # CI, E2E, Feeds, Release
 └── docs/                     # architecture, testing, CI/CD, OCR pipeline
 ```
@@ -156,7 +160,8 @@ sc-ore-scanner/
 3. `ocrs` OCRs the crop; each line is split into number tokens (so the RS value isn't
    merged with the distance marker).
 4. Tokens that are 3–6 digit numbers in the valid RS range are kept.
-5. **Debouncing**: a number must appear in 3 consecutive frames to be confirmed.
+5. **Debouncing**: a number must appear in at least 3 of the last 6 frames to be confirmed
+   (a window, so a frame-to-frame OCR wobble doesn't blank the card).
 6. The **resolver** divides the RS number by known signatures (with OCR-error
    correction) — e.g. `10,620 ÷ 3,540 = 3 → 3× Beryl`.
 7. Results are pushed to the React overlay via a Tauri event and shown sorted by tier.
@@ -209,7 +214,8 @@ calibration):
   "upscale": 4,
   "min_consecutive_frames": 3,
   "clahe_clip_limit": 0.0,
-  "clahe_grid": [8, 8]
+  "clahe_grid": [8, 8],
+  "mining_location": null
 }
 ```
 
@@ -217,6 +223,12 @@ calibration):
   confirm. Together they set how fast an ore appears (0.75 × 3 ≈ 2.25s).
 - `clahe_clip_limit` — contrast boost; `0` = off (default; ocrs reads raw text well).
   Raise it (e.g. `2.0`) for dark/low-contrast frames.
+- `mining_location` — the body you're mining (e.g. `"Cellin"`), set via the Settings
+  location picker; `null` = no location ranking. When set, ambiguous candidates are
+  ranked/filtered by their per-location spawn probability.
+
+Values out of range are clamped on load, so a hand-edited `config.json` can't push the
+scan loop into a bad state.
 
 The overlay window size/position is in `frontend/src-tauri/tauri.conf.json` (position
 is also remembered across launches in `%APPDATA%\…\.window-state.json`).
@@ -245,17 +257,21 @@ signature charts (30 ores + 7 asteroid types).
 (exclusive fullscreen can cover overlays).
 
 **No detections:** click **Set region** and draw the box snugly around the RS number;
-hold on a deposit for a couple of seconds (3-frame debounce). Check
-`%APPDATA%\com.scorescanner.app\logs\scanner.log` — it logs what OCR read and what was
-detected.
+hold on a deposit for a couple of seconds (the debounce needs the number in a few recent
+frames). Check `%APPDATA%\com.scorescanner.app\logs\scanner.log` — it logs what OCR read
+and what was detected. For more detail (the raw OCR line dumps), set the environment
+variable `SC_ORE_LOG=debug` before launching. The log is capped: once it passes 5 MB it
+rolls to `scanner.log.1` at startup.
 
 **Stuck on "Starting scanner…":** the OCR engine takes ~15–20s to warm up on first
-launch; after that it should switch to "Set your scan region."
+launch; after that it should switch to "Set your scan region." If it instead shows
+**"Scanner unavailable,"** the OCR engine failed to load — check `scanner.log` and restart.
 
 ## Performance
 
 - **One process**, no IPC. OCR runs on a small cropped region, not the full screen.
-- Models embedded (~26 MB exe). Low CPU at the default scan interval.
+- OCR models (~12 MB) embedded; the portable download is ~16 MB. Low CPU at the default
+  scan interval.
 
 ## Roadmap
 

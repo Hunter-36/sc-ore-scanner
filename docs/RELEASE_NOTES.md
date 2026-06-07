@@ -13,6 +13,7 @@ A real-time Star Citizen mining overlay. **Single self-contained app — no Pyth
 
 Star Citizen must run in **borderless/windowed** mode for the overlay to draw on top.
 
-Logs: `%APPDATA%\com.scorescanner.app\logs\scanner.log`.
+Logs: `%APPDATA%\com.scorescanner.app\logs\scanner.log` (set `SC_ORE_LOG=debug` for more
+detail; rolls over past 5 MB).
 
 ---

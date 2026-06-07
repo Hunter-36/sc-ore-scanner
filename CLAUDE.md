@@ -75,8 +75,9 @@ cargo fmt --check && cargo clippy -- -D warnings
 
 capture primary monitor → crop to `scan_region` → upscale ×4 (Lanczos) →
 *(CLAHE contrast, opt-in)* → `ocrs` OCR → extract each number token from each line
-→ keep 3–6 digit numbers in `valid_rs_min..max` → **debounce: confirm after
-`min_consecutive_frames` (3)** → resolver (division match + OCR-error correction)
+→ keep 3–6 digit numbers in `valid_rs_min..max` → **debounce: confirm a number seen in
+≥`min_consecutive_frames` of the last `2×` frames (default 3 of 6 — a window, not a
+strict run)** → resolver (division match + OCR-error correction)
 → aggregate best-per-ore → emit `scan-result`.
 
 ## Testing model
@@ -109,7 +110,9 @@ capture primary monitor → crop to `scan_region` → upscale ×4 (Lanczos) →
   models never enter git.
 - **Tauri icons are committed** under `frontend/src-tauri/icons/`.
 - **Runtime data** lives in `%APPDATA%\com.scorescanner.app\`: `config.json`
-  (scan region + tuning), `.window-state.json`, `logs/scanner.log`.
+  (scan region + tuning), `mineables.json` (cached dataset feed), `.window-state.json`,
+  `logs/scanner.log` (+ `scanner.log.1` once it rolls past 5 MB). `SC_ORE_LOG`
+  (trace/debug/info/warn/error/off, default info) sets the log level.
 
 ## Conventions
 

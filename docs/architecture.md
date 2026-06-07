@@ -30,7 +30,7 @@ pushed to the React overlay via a Tauri event. No separate backend, no WebSocket
 | `preprocess.rs` | Crop to the scan region, upscale ×4 (Lanczos), optional grayscale + CLAHE. |
 | `ocr.rs` | `Ocr` — the `ocrs` engine; detection/recognition `.rten` models embedded at build time (`build.rs`). |
 | `pipeline.rs` | `recognize_rs_numbers` / `recognize_rs_numbers_from_processed` (OCR → split each line into number tokens via the internal `extract_numbers` helper → keep 3–6 digit numbers in RS range), `resolve_and_aggregate`, and the one-shot `detect_ores` (preprocess + recognize + resolve) used by the `validate` example and the e2e test. |
-| `debounce.rs` | `Debouncer` — confirm a number only after it appears in N consecutive frames. |
+| `debounce.rs` | `Debouncer` — confirm a number once it appears in ≥N of the last 2N frames (a window, tolerant of OCR jitter), not a strict consecutive run. |
 | `resolver.rs` | `Resolver` — RS number → ore matches via division (`detected = base_rs × quantity`), with fuzzy tolerance and OCR-error correction. |
 | `signatures.rs` | `OreSignature` (+ per-body `Location`); loads the embedded `core/data/mineables.json` — generated from the curated `signatures.json` + Wiki API by `scripts/fetch_mineables.py`. |
 | `mineables.rs` | `mineables::load` — sources the dataset at startup: live Pages feed → on-disk cache → embedded copy (mirrors `prices.rs`). |
@@ -73,6 +73,10 @@ hand-edited `config.json` is sanitized too): `scan_interval_secs` **0.3–5.0**,
   shows the set ranked by per-location spawn `probability` when a `mining_location` is set.
 - `scanner_active`: whether the OCR loop is running
 - `configured`: `false` until a scan region is calibrated (overlay prompts "Set region")
+- `error` *(optional)*: set when the scan loop can't run at all (e.g. the OCR engine
+  failed to load). The thread emits this once and exits; the overlay shows "Scanner
+  unavailable" + the cause instead of hanging on "Starting scanner…". Omitted (absent)
+  on healthy cycles.
 
 `OreOut`/`ScanResult` (`scan.rs`) mirror `OreData`/`ScanResult` in
 `src/store/useOreStore.ts` — keep the two in sync.
@@ -87,10 +91,14 @@ hand-edited `config.json` is sanitized too): `scan_interval_secs` **0.3–5.0**,
 4. `ocrs` OCRs the crop; `recognize_rs_numbers_from_processed` splits each line into
    number tokens (via the internal `extract_numbers` helper, so the RS value isn't
    merged with the distance marker) and keeps 3–6 digit numbers in `valid_rs_min..max`.
-5. The `Debouncer` confirms numbers seen in `min_consecutive_frames` consecutive frames.
+5. The `Debouncer` confirms a number once it appears in at least `min_consecutive_frames`
+   of the last `2 × min_consecutive_frames` frames (default: 3 of the last 6) — a window,
+   not a strict consecutive run, so a signature whose last digit wobbles frame-to-frame
+   still confirms.
 6. `resolve_and_aggregate` maps each confirmed number to its best ore and keeps the
    best per ore.
-7. A `ScanResult` (ores + `scanner_active` + `configured`) is emitted as `scan-result`.
+7. A `ScanResult` (ores + `scanner_active` + `configured`, plus `error` on a fatal
+   failure) is emitted as `scan-result`.
 8. `useScanEvents` feeds `useOreStore`; `Overlay` renders one `OreCard` per ore,
    sorted by tier then quantity, with the UEX price per SCU.
 

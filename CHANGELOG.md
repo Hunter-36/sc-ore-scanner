@@ -31,6 +31,19 @@ curated, human-readable summary.
 - The frontend's `scan-result` event handler is now guarded, so a malformed payload
   logs to the console instead of silently escaping React's error boundary.
 
+## [2.3.2] - 2026-06-07
+
+### Fixed
+- **Ambiguous and high-RS cards no longer flicker** on dropped OCR frames. The debouncer
+  now confirms a number seen in a majority of recent frames (≥N of the last 2N) instead of
+  requiring a strict consecutive run, so a signature whose last digit wobbles frame-to-frame
+  (e.g. 14,160 vs 14,150) stays confirmed through the jitter; the overlay also lingers the
+  last result through a brief empty gap. (#103)
+
+### Changed
+- Price labels read **"/SCU"** to make the unit explicit. Expanded resolver/debounce test
+  coverage. (#103)
+
 ## [2.3.1] - 2026-06-07
 
 ### Fixed

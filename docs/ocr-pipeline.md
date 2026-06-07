@@ -35,8 +35,10 @@ Detection/recognition is done by [`ocrs`](https://github.com/robertknight/ocrs)
    token. So `"0 7,080 18.8km"` → `["0","7080","18","8"]`. Keep tokens that are 3–6
    digit numbers within `valid_rs_min..max`. (The pin glyph / distance fragments fall
    out by length.)
-6. **Debounce** (`Debouncer`): a number must appear in `min_consecutive_frames` (3)
-   consecutive frames before it's reported — this filters transient misreads.
+6. **Debounce** (`Debouncer`): a number must appear in at least `min_consecutive_frames`
+   (3) of the last `2 × min_consecutive_frames` (6) frames before it's reported — a
+   *window*, not a strict consecutive run, so a sig whose last digit wobbles frame-to-frame
+   (e.g. 14,160 vs 14,150) stays confirmed through the jitter. Filters transient misreads.
 7. **Resolve**: confirmed numbers go to the `Resolver` (division + OCR-error correction)
    → ore matches → aggregate best-per-ore.
 
@@ -49,7 +51,8 @@ Detection/recognition is done by [`ocrs`](https://github.com/robertknight/ocrs)
   8-digit blob that was rejected.
 - **Debouncing instead of a confidence gate.** v1 dropped low-confidence reads (RapidOCR
   gave a score). `ocrs` exposes no per-line confidence (only chars + rects), so the
-  3-frame debounce carries that role — a transient misread can't survive three frames.
+  windowed debounce carries that role — a transient misread can't reach a majority of the
+  recent frames, so it never confirms.
 
 ## CLAHE is off by default
 
