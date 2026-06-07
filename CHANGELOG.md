@@ -7,6 +7,18 @@ All notable changes to SC Ore Scanner. The format is based on
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.2.10] - 2026-06-06
+
+### Fixed
+- Mining signature data corrected to SC 4.8 (per MrKraken's chart, cross-checked
+  against the Star Citizen Wiki API): FPS hand-mined gems are now a flat **3000**
+  signature (Hadanite/Dolivine/Aphorite were stale per-gem values), **Janalite**
+  added, and **Felinite** removed (no longer in the game). Added the ground-vehicle
+  (ROC/ATLS) deposits **Beradom/Feynmaline/Glacosite** at the flat **4000** signature,
+  and retagged the 26 ship ores from `["ship","vehicle"]` to `["ship"]` (ground
+  vehicle is a distinct context). RS readings remain ambiguous within FPS (all 3000)
+  and at 4000 (ROC deposits vs the I-Type asteroid) — surfaced as alternatives. (#22)
+
 ## [2.2.9] - 2026-06-06
 
 ### Changed
@@ -127,6 +139,7 @@ v1 was a Python/FastAPI backend + Tauri overlay over a local WebSocket. See the
 [GitHub Releases](https://github.com/Hunter-36/sc-ore-scanner/releases) for the
 full v1 history.
 
+[2.2.10]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.10
 [2.2.9]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.9
 [2.2.8]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.8
 [2.2.7]: https://github.com/Hunter-36/sc-ore-scanner/releases/tag/v2.2.7

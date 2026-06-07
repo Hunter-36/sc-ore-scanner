@@ -7,7 +7,7 @@
       "tier": "S",
       "tier_value": 4,
       "volatile": true,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": "Degrades after extraction. Highest value ore."
     },
     {
@@ -17,7 +17,7 @@
       "tier": "S",
       "tier_value": 4,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": "High value stable ore."
     },
     {
@@ -27,7 +27,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -37,7 +37,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -47,7 +47,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -57,7 +57,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -67,7 +67,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -77,7 +77,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -87,7 +87,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -97,7 +97,7 @@
       "tier": "B",
       "tier_value": 2,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -107,7 +107,7 @@
       "tier": "B",
       "tier_value": 2,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -117,7 +117,7 @@
       "tier": "B",
       "tier_value": 2,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -127,7 +127,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -137,7 +137,7 @@
       "tier": "B",
       "tier_value": 2,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -147,7 +147,7 @@
       "tier": "B",
       "tier_value": 2,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -157,7 +157,7 @@
       "tier": "B",
       "tier_value": 2,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -167,7 +167,7 @@
       "tier": "B",
       "tier_value": 2,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -177,7 +177,7 @@
       "tier": "C",
       "tier_value": 1,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -187,7 +187,7 @@
       "tier": "C",
       "tier_value": 1,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -197,7 +197,7 @@
       "tier": "C",
       "tier_value": 1,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -207,7 +207,7 @@
       "tier": "C",
       "tier_value": 1,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -217,7 +217,7 @@
       "tier": "C",
       "tier_value": 1,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": ""
     },
     {
@@ -227,7 +227,7 @@
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": "Added in SC 4.7."
     },
     {
@@ -237,7 +237,7 @@
       "tier": "C",
       "tier_value": 1,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": "Added in SC 4.7."
     },
     {
@@ -247,7 +247,7 @@
       "tier": "C",
       "tier_value": 1,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": "Added in SC 4.7."
     },
     {
@@ -257,48 +257,78 @@
       "tier": "C",
       "tier_value": 1,
       "volatile": false,
-      "context": ["ship", "vehicle"],
+      "context": ["ship"],
       "notes": "Added in SC 4.7."
     },
     {
       "id": "hadanite",
       "name": "Hadanite",
-      "base_rs": 5415,
+      "base_rs": 3000,
       "tier": "S",
       "tier_value": 4,
       "volatile": false,
       "context": ["fps"],
-      "notes": "Hand-minable gem. FPS scanner only."
+      "notes": "Hand-minable gem (FPS scanner). All FPS gems share a flat 3000 signature in SC 4.8, so RS gives quantity, not which gem."
     },
     {
       "id": "dolivine",
       "name": "Dolivine",
-      "base_rs": 5250,
+      "base_rs": 3000,
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
       "context": ["fps"],
-      "notes": "Hand-minable gem. FPS scanner only."
+      "notes": "Hand-minable gem (FPS scanner). Flat 3000 FPS signature in SC 4.8."
     },
     {
       "id": "aphorite",
       "name": "Aphorite",
-      "base_rs": 5235,
+      "base_rs": 3000,
       "tier": "B",
       "tier_value": 2,
       "volatile": false,
       "context": ["fps"],
-      "notes": "Hand-minable gem. FPS scanner only."
+      "notes": "Hand-minable gem (FPS scanner). Flat 3000 FPS signature in SC 4.8."
     },
     {
-      "id": "felinite",
-      "name": "Felinite",
-      "base_rs": 5430,
+      "id": "janalite",
+      "name": "Janalite",
+      "base_rs": 3000,
+      "tier": "S",
+      "tier_value": 4,
+      "volatile": false,
+      "context": ["fps"],
+      "notes": "Hand-minable gem (FPS scanner), added in SC 4.8. Flat 3000 FPS signature."
+    },
+    {
+      "id": "beradom",
+      "name": "Beradom",
+      "base_rs": 4000,
       "tier": "A",
       "tier_value": 3,
       "volatile": false,
-      "context": ["fps"],
-      "notes": "Hand-minable gem. FPS scanner only."
+      "context": ["vehicle"],
+      "notes": "Ground-vehicle (ROC/ATLS) deposit. Flat 4000 signature; shares the base with the I-Type asteroid and the other ROC deposits, so a 4000xn read is ambiguous between them."
+    },
+    {
+      "id": "feynmaline",
+      "name": "Feynmaline",
+      "base_rs": 4000,
+      "tier": "A",
+      "tier_value": 3,
+      "volatile": false,
+      "context": ["vehicle"],
+      "notes": "Ground-vehicle (ROC/ATLS) deposit. Flat 4000 signature."
+    },
+    {
+      "id": "glacosite",
+      "name": "Glacosite",
+      "base_rs": 4000,
+      "tier": "B",
+      "tier_value": 2,
+      "volatile": false,
+      "context": ["vehicle"],
+      "notes": "Ground-vehicle (ROC/ATLS) deposit. Flat 4000 signature."
     },
     {
       "id": "salvage_panel",
@@ -318,7 +348,7 @@
       "tier_value": 0,
       "volatile": false,
       "context": ["asteroid"],
-      "notes": "Asteroid type signature (SC 4.7). Also the ground-vehicle deposit base (n x 4000)."
+      "notes": "Asteroid type signature. Shares the 4000 base with the ground-vehicle (ROC) deposits (Beradom/Feynmaline/Glacosite), so a 4000xn read is ambiguous between them."
     },
     {
       "id": "asteroid_c_type",

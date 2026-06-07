@@ -225,7 +225,10 @@ mod tests {
 
     #[test]
     fn ambiguous_asteroid_signature_keeps_both() {
-        // 4000 = 1x I-Type Asteroid (4000) = 2x Salvage Panel (2000) — both exact.
+        // 4000 is an exact multiple of several bases: 1x I-Type Asteroid (4000),
+        // 1x each ground-vehicle deposit Beradom/Feynmaline/Glacosite (4000), and
+        // 2x Salvage Panel (2000). All are kept as alternatives (issue #22 — the RS
+        // number alone can't disambiguate co-occurring contexts).
         let r = crate::resolver::Resolver::new();
         let agg = super::resolve_and_aggregate(&[4000], &r);
         assert_eq!(agg.len(), 1, "one primary card");
@@ -236,6 +239,9 @@ mod tests {
         assert_eq!(
             all,
             vec![
+                "1x Beradom".to_string(),
+                "1x Feynmaline".to_string(),
+                "1x Glacosite".to_string(),
                 "1x I-Type Asteroid".to_string(),
                 "2x Salvage Panel".to_string()
             ]

@@ -5,11 +5,17 @@ use scanner_core::Resolver;
 #[test]
 fn signatures_loaded() {
     let r = Resolver::new();
-    assert_eq!(r.signatures().len(), 38);
+    assert_eq!(r.signatures().len(), 41);
     assert!(r
         .signatures()
         .iter()
         .any(|o| o.id == "beryl" && o.base_rs == 3540));
+    // SC 4.8 roster (issue #22): Janalite added, Felinite removed.
+    assert!(r
+        .signatures()
+        .iter()
+        .any(|o| o.id == "janalite" && o.base_rs == 3000));
+    assert!(!r.signatures().iter().any(|o| o.id == "felinite"));
 }
 
 #[test]
@@ -107,6 +113,74 @@ fn near_neighbor_disambiguation() {
         assert_eq!(top.ore.name, name, "rs {rs} should resolve to {name}");
         assert_eq!(top.quantity, 1);
         assert_eq!(top.error_margin, 0, "rs {rs} is exact");
+    }
+}
+
+#[test]
+fn fps_gems_are_flat_3000() {
+    // SC 4.8 (issue #22): all FPS hand-mineable gems share a flat 3000 signature,
+    // so the RS number gives quantity, not which gem.
+    let r = Resolver::new();
+    let fps: Vec<_> = r
+        .signatures()
+        .iter()
+        .filter(|o| o.context.iter().any(|c| c == "fps"))
+        .collect();
+    assert_eq!(fps.len(), 4, "expected 4 FPS gems");
+    assert!(
+        fps.iter().all(|o| o.base_rs == 3000),
+        "all FPS gems base 3000"
+    );
+    for name in ["Hadanite", "Dolivine", "Aphorite", "Janalite"] {
+        assert!(fps.iter().any(|o| o.name == name), "FPS gem {name} present");
+    }
+}
+
+#[test]
+fn ground_vehicle_deposits_are_4000() {
+    let r = Resolver::new();
+    let gv: Vec<_> = r
+        .signatures()
+        .iter()
+        .filter(|o| o.context.iter().any(|c| c == "vehicle"))
+        .collect();
+    assert_eq!(gv.len(), 3, "expected 3 ground-vehicle deposits");
+    assert!(gv.iter().all(|o| o.base_rs == 4000));
+    for name in ["Beradom", "Feynmaline", "Glacosite"] {
+        assert!(
+            gv.iter().any(|o| o.name == name),
+            "ROC deposit {name} present"
+        );
+    }
+}
+
+#[test]
+fn fps_signature_yields_quantity_for_every_gem() {
+    // An FPS read of 9000 is 3x of *every* gem (base 3000) — ambiguous by design,
+    // so all four must surface at qty 3 (the overlay shows them as alternatives).
+    let r = Resolver::new();
+    let m = r.resolve(9000, 1.0);
+    let top = m.first().expect("a match for 9000");
+    assert_eq!(top.quantity, 3);
+    for name in ["Hadanite", "Dolivine", "Aphorite", "Janalite"] {
+        assert!(
+            m.iter().any(|x| x.ore.name == name && x.quantity == 3),
+            "9000 should match {name} x3"
+        );
+    }
+}
+
+#[test]
+fn vehicle_4000_collides_with_itype_asteroid() {
+    // 4000 is shared by the I-Type asteroid and all three ROC deposits — the exact
+    // collision called out in issue #22. All must surface (no mode filtering).
+    let r = Resolver::new();
+    let m = r.resolve(4000, 1.0);
+    for name in ["I-Type Asteroid", "Beradom", "Feynmaline", "Glacosite"] {
+        assert!(
+            m.iter().any(|x| x.ore.name == name && x.quantity == 1),
+            "4000 should match {name} x1"
+        );
     }
 }
 
