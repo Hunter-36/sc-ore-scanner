@@ -29,6 +29,47 @@ fn round_trip_preserves_all_fields() {
     assert_eq!(loaded.mining_location.as_deref(), Some("Cellin"));
 }
 
+/// The exact flow the `save_scan_region` Tauri command runs: load an existing
+/// config that has the user's tuning but no region yet, set ONLY the region,
+/// save, and reload. Calibrating a region must not clobber the other settings —
+/// this is the regression #44 calls out (the round-trip is in `Config`, the
+/// command just wraps it with the AppHandle's config path).
+#[test]
+fn save_scan_region_preserves_existing_settings() {
+    let path =
+        std::env::temp_dir().join(format!("sc_ore_cfg_setregion_{}.json", std::process::id()));
+    let _ = std::fs::remove_file(&path);
+
+    // Seed: tuned settings, not-yet-calibrated (the post-first-run state).
+    let seed = Config {
+        scan_region: None,
+        scan_interval_secs: 1.25,
+        upscale: 5,
+        min_consecutive_frames: 4,
+        clahe_clip_limit: 3.0,
+        clahe_grid: [16, 16],
+        mining_location: Some("Aaron Halo".to_string()),
+    };
+    seed.save(&path).expect("seed save");
+
+    // The command's body: load -> set only the region -> save.
+    let mut cfg = Config::load(&path);
+    cfg.scan_region = Some([100, 200, 300, 150]);
+    cfg.save(&path).expect("save region");
+
+    // Reload: region applied, every other setting untouched.
+    let loaded = Config::load(&path);
+    let _ = std::fs::remove_file(&path);
+
+    assert_eq!(loaded.scan_region, Some([100, 200, 300, 150]), "region set");
+    assert_eq!(loaded.scan_interval_secs, 1.25);
+    assert_eq!(loaded.upscale, 5);
+    assert_eq!(loaded.min_consecutive_frames, 4);
+    assert_eq!(loaded.clahe_clip_limit, 3.0);
+    assert_eq!(loaded.clahe_grid, [16, 16]);
+    assert_eq!(loaded.mining_location.as_deref(), Some("Aaron Halo"));
+}
+
 #[test]
 fn load_missing_file_is_defaults() {
     let path = std::env::temp_dir().join("sc_ore_cfg_does_not_exist_xyz.json");
