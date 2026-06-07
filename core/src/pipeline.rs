@@ -22,6 +22,10 @@ pub struct Detection {
     pub quantity: i64,
     pub detected_rs: i64,
     pub confidence: f64,
+    /// How far the primary reading's RS was from an exact multiple of its base
+    /// (0 = exact). Used to drop a fuzzy near-miss when an exact read of the same
+    /// ore is also on screen (OCR jitter, e.g. a 14,150 misread of 14,160).
+    pub error_margin: i64,
     pub alternatives: Vec<String>,
     /// Every equally-likely reading of this RS number (the primary first), with each
     /// one's spawn probability at the active mining location when set. For a
@@ -196,6 +200,13 @@ pub fn resolve_and_aggregate(
         }
 
         let primary = candidates[0].clone();
+        // How far the primary's RS sat from an exact multiple of its base (0 =
+        // exact). Lets us later drop a fuzzy near-miss that an exact read covers.
+        let error_margin = tied
+            .iter()
+            .find(|m| m.ore.id == primary.ore.id && m.quantity == primary.quantity)
+            .map(|m| m.error_margin)
+            .unwrap_or(0);
         let alternatives: Vec<String> = candidates[1..]
             .iter()
             .map(|c| format!("{}x {}", c.quantity, c.ore.name))
@@ -205,6 +216,7 @@ pub fn resolve_and_aggregate(
             quantity: primary.quantity,
             detected_rs: num,
             confidence: top,
+            error_margin,
             alternatives,
             candidates,
         };
@@ -217,6 +229,22 @@ pub fn resolve_and_aggregate(
             })
             .or_insert(det);
     }
+
+    // Drop a fuzzy card that an exact read already covers. OCR jitter turns one
+    // signature into two raw reads — an exact one (e.g. 14,160 → 4× Beryl / 3×
+    // S-Type) and a fuzzy near-miss (14,150 → 3× S-Type, error 5). With the
+    // window debouncer both can confirm, which would show the ambiguous card AND
+    // a duplicate plain S-Type card. If an exact reading (error_margin == 0)
+    // already lists this card's ore among its candidates, the fuzzy card is that
+    // same signature misread — drop it. Exact-vs-exact neighbours (Beryl 3540 /
+    // Taranite 3555, issue #11) are untouched: neither has error_margin > 0.
+    let exact_candidate_ids: HashSet<String> = agg
+        .values()
+        .filter(|d| d.error_margin == 0)
+        .flat_map(|d| d.candidates.iter().map(|c| c.ore.id.clone()))
+        .collect();
+    agg.retain(|id, d| d.error_margin == 0 || !exact_candidate_ids.contains(id));
+
     agg
 }
 
@@ -293,6 +321,37 @@ mod tests {
             all,
             vec!["5x Aslarite".to_string(), "6x Savrilium".to_string()]
         );
+    }
+
+    #[test]
+    fn fuzzy_jitter_read_is_subsumed_by_exact_read() {
+        // OCR jitter: 14,160 (exact → 4× Beryl / 3× S-Type, the ambiguous card)
+        // alternates with a 14,150 misread (fuzzy → 3× S-Type, error 10). With the
+        // window debouncer both confirm, but the fuzzy read must NOT spawn a second
+        // standalone S-Type card — the exact read already covers S-Type.
+        let r = crate::resolver::Resolver::new();
+        let agg = super::resolve_and_aggregate(&[14_160, 14_150], &r, None);
+        assert_eq!(
+            agg.len(),
+            1,
+            "fuzzy near-miss collapses into the exact card"
+        );
+        let det = agg.values().next().unwrap();
+        assert_eq!((det.ore.name.as_str(), det.quantity), ("Beryl", 4));
+        assert_eq!(det.detected_rs, 14_160, "exact read wins the primary");
+        assert_eq!(det.error_margin, 0);
+    }
+
+    #[test]
+    fn standalone_fuzzy_read_still_shows() {
+        // The subsumption only fires when an exact read covers the ore. A lone
+        // fuzzy read with no exact competitor must still surface its card.
+        let r = crate::resolver::Resolver::new();
+        let agg = super::resolve_and_aggregate(&[14_150], &r, None);
+        assert_eq!(agg.len(), 1, "a fuzzy read alone is not dropped");
+        let det = agg.values().next().unwrap();
+        assert_eq!(det.ore.name, "S-Type Asteroid");
+        assert!(det.error_margin > 0, "this read is fuzzy");
     }
 
     #[test]

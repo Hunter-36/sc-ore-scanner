@@ -1,8 +1,14 @@
-//! Detection debouncing — a faithful port of the Python OCR engine's
+//! Detection debouncing — descended from the Python OCR engine's
 //! `_update_debouncing` / `get_confirmed_numbers`. A number must be present in
-//! the last N consecutive frames before it's "confirmed", which filters out
-//! transient OCR misreads (the role v1's confidence gate also played; ocrs does
-//! not expose per-line confidence, so debouncing carries it).
+//! `min_frames` of the last `2*min_frames` frames before it's "confirmed", which
+//! filters out transient OCR misreads (the role v1's confidence gate also played;
+//! ocrs does not expose per-line confidence, so debouncing carries it).
+//!
+//! The window (rather than v1's *strictly consecutive* run) tolerates OCR jitter:
+//! a sig whose last digit wobbles frame-to-frame (e.g. 14,160 vs 14,150) splits
+//! into two raw reads that each only appear ~half the frames, so a consecutive-run
+//! rule never confirmed either and the card flickered. Counting presence in a
+//! window keeps the dominant read confirmed through the jitter.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -50,12 +56,20 @@ impl Debouncer {
         }
     }
 
-    /// Numbers detected in the last `min_frames` consecutive frames.
+    /// The look-back window for confirmation: twice the confirm threshold (capped
+    /// at the stored history), so a number needs to be present in at least *half*
+    /// the recent frames — tolerant of every-other-frame OCR jitter.
+    fn window(&self) -> usize {
+        (self.min_frames * 2).min(HISTORY_LEN)
+    }
+
+    /// Numbers present in at least `min_frames` of the last `window()` frames.
     pub fn confirmed(&self) -> Vec<i64> {
+        let window = self.window();
         self.history
             .iter()
             .filter(|(_, dq)| {
-                dq.len() >= self.min_frames && dq.iter().rev().take(self.min_frames).all(|&b| b)
+                dq.iter().rev().take(window).filter(|&&b| b).count() >= self.min_frames
             })
             .map(|(&n, _)| n)
             .collect()
@@ -79,7 +93,7 @@ mod tests {
     use super::Debouncer;
 
     #[test]
-    fn confirms_after_min_consecutive_frames() {
+    fn confirms_after_min_frames() {
         let mut d = Debouncer::new(3);
         d.update(&[7080]);
         assert!(d.confirmed().is_empty(), "1 frame");
@@ -90,17 +104,42 @@ mod tests {
     }
 
     #[test]
-    fn a_gap_resets_the_streak() {
+    fn tolerates_intermittent_misses() {
+        // The flicker fix: a number read in most-but-not-all recent frames (OCR
+        // jitter, e.g. 14,160 alternating with a 14,150 misread) must still
+        // confirm — >=min_frames of the last 2*min_frames frames, not a strict
+        // consecutive run. Here 14160 is present on 3 of the last 5 frames.
+        let mut d = Debouncer::new(3);
+        d.update(&[14160]);
+        d.update(&[14150]); // jitter — 14160 absent
+        d.update(&[14160]);
+        d.update(&[14150]); // jitter again
+        d.update(&[14160]);
+        assert!(
+            d.confirmed().contains(&14160),
+            "dominant read confirms through jitter"
+        );
+        // The minority read (2 of 5) stays below the bar on its own.
+        assert!(
+            !d.confirmed().contains(&14150),
+            "minority read not yet confirmed"
+        );
+    }
+
+    #[test]
+    fn a_single_dropped_frame_no_longer_blanks() {
+        // Previously one missed frame broke the streak and blanked the card; now a
+        // lone miss inside the window is tolerated.
         let mut d = Debouncer::new(3);
         d.update(&[7080]);
         d.update(&[7080]);
-        d.update(&[]); // missed frame
-        assert!(d.confirmed().is_empty());
+        d.update(&[]); // one missed frame
         d.update(&[7080]);
-        d.update(&[7080]);
-        assert!(d.confirmed().is_empty(), "only 2 since the gap");
-        d.update(&[7080]);
-        assert_eq!(d.confirmed(), vec![7080]);
+        assert_eq!(
+            d.confirmed(),
+            vec![7080],
+            "3 of last 4 frames -> still confirmed"
+        );
     }
 
     #[test]

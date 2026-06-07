@@ -60,7 +60,11 @@ export function OreCard({ ore }: OreCardProps) {
                   {sameQty ? '' : ` ${c.quantity}x`}
                 </span>
                 <span className="candidate-meta">
-                  {val && <span className="candidate-value">≈{val}</span>}
+                  {val && (
+                    <span className="candidate-value" title="Market sell price per SCU (UEX Corp)">
+                      ≈{val}/SCU
+                    </span>
+                  )}
                   {c.probability != null && (
                     <span className="candidate-prob">{Math.round(c.probability)}%</span>
                   )}
