@@ -68,6 +68,11 @@ struct ScanResult {
     /// False until a scan region has been calibrated — lets the overlay prompt
     /// the user to set one instead of sitting on "Starting scanner…".
     configured: bool,
+    /// Set when the scan loop can't run at all (e.g. the OCR engine failed to
+    /// load). The overlay shows this instead of hanging forever on "Starting
+    /// scanner…", which is otherwise indistinguishable from a slow model load.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
 /// A short category for a signature-degenerate candidate set (≥2 readings the RS can't
@@ -145,6 +150,20 @@ pub fn start(app: AppHandle) {
             Ok(o) => o,
             Err(e) => {
                 log::error!("OCR init failed: {e}");
+                // Tell the overlay so it surfaces the failure instead of sitting
+                // on "Starting scanner…" forever (the thread is about to exit, so
+                // no further event will ever arrive to flip `connected`).
+                let _ = app.emit(
+                    "scan-result",
+                    ScanResult {
+                        ores: HashMap::new(),
+                        scanner_active: false,
+                        configured: false,
+                        error: Some(format!(
+                            "OCR engine failed to load: {e}. See logs/scanner.log, then restart the app."
+                        )),
+                    },
+                );
                 return;
             }
         };
@@ -240,6 +259,7 @@ pub fn start(app: AppHandle) {
                                 ores: HashMap::new(),
                                 scanner_active: false,
                                 configured: false,
+                                error: None,
                             },
                         );
                     }
@@ -350,6 +370,7 @@ pub fn start(app: AppHandle) {
                                                 ores,
                                                 scanner_active: true,
                                                 configured: true,
+                                                error: None,
                                             },
                                         );
                                     }

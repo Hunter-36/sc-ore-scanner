@@ -17,8 +17,14 @@ export function useScanEvents() {
       try {
         const { listen } = await import('@tauri-apps/api/event');
         const stop = await listen<ScanResult>('scan-result', (event) => {
-          setConnected(true);
-          updateFromScan(event.payload);
+          // The callback runs outside React's render tree, so a throw here would
+          // escape the ErrorBoundary and be silently swallowed — guard it.
+          try {
+            setConnected(true);
+            updateFromScan(event.payload);
+          } catch (err) {
+            console.error('Failed to apply scan-result payload:', err, event.payload);
+          }
         });
         if (active) {
           unlisten = stop;
@@ -46,8 +52,12 @@ export function useScanEvents() {
     const onMock = (e: Event) => {
       const detail = (e as CustomEvent<ScanResult>).detail;
       if (!detail) return;
-      setConnected(true);
-      updateFromScan(detail);
+      try {
+        setConnected(true);
+        updateFromScan(detail);
+      } catch (err) {
+        console.error('Failed to apply mock-scan payload:', err, detail);
+      }
     };
     window.addEventListener('mock-scan', onMock);
     return () => window.removeEventListener('mock-scan', onMock);
