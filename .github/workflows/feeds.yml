@@ -36,8 +36,8 @@ jobs:
     env:
       PAGES_BASE: https://hunter-36.github.io/sc-ore-scanner
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Build prices.json from UEX (every run)
@@ -49,8 +49,8 @@ jobs:
       - name: Rebuild mineables.json from the Wiki API (daily + manual)
         if: github.event.schedule == '30 6 * * *' || github.event_name == 'workflow_dispatch'
         run: python scripts/fetch_mineables.py
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: public
       - id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

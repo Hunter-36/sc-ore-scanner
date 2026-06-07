@@ -168,7 +168,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
         <input
           type="range"
           min={0.3}
-          max={3}
+          max={5}
           step={0.05}
           value={cfg.scan_interval_secs}
           onChange={(e) => update({ scan_interval_secs: parseFloat(e.target.value) })}
@@ -213,7 +213,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
         <input
           type="range"
           min={0}
-          max={4}
+          max={8}
           step={0.5}
           value={cfg.clahe_clip_limit}
           onChange={(e) => update({ clahe_clip_limit: parseFloat(e.target.value) })}
