@@ -7,6 +7,30 @@ All notable changes to SC Ore Scanner. The format is based on
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.4.0] - 2026-06-07
+
+### Added
+- **Panics are now logged.** A global panic hook routes any panic (its message +
+  source location) to `scanner.log`, so failures are diagnosable in release builds —
+  which have no console. This also enriches the scan loop's existing panic guard with
+  the actual panic message instead of a generic line.
+- **The overlay surfaces a fatal scanner failure instead of hanging.** If the OCR
+  engine fails to load, the scan thread now emits an error to the overlay (shown as
+  "Scanner unavailable" with the cause) rather than leaving it stuck on "Starting
+  scanner…" forever. The `scan-result` event gained an optional `error` field.
+- **Configurable log verbosity.** Set `SC_ORE_LOG=debug` (trace/debug/info/warn/
+  error/off) to capture detection-level detail — the OCR line dumps — for a bug
+  report, without a custom build. Defaults to `info`.
+
+### Changed
+- **The log file no longer grows without bound.** `scanner.log` is rolled to
+  `scanner.log.1` at startup once it passes 5 MB, capping disk use across months of
+  sessions.
+
+### Fixed
+- The frontend's `scan-result` event handler is now guarded, so a malformed payload
+  logs to the console instead of silently escaping React's error boundary.
+
 ## [2.3.1] - 2026-06-07
 
 ### Fixed
