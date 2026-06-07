@@ -260,6 +260,71 @@ impl<W: std::io::Write> std::io::Write for RedactingWriter<W> {
     }
 }
 
+/// Max log size before it's rolled at startup. The log only writes on state
+/// changes (not per frame), so a single roll to `scanner.log.1` bounds disk use
+/// at ~2× this without a per-write rotation check on the hot path.
+const MAX_LOG_BYTES: u64 = 5 * 1024 * 1024;
+
+/// Log level from the `SC_ORE_LOG` env var (trace/debug/info/warn/error/off),
+/// defaulting to Info. Lets a user capture detection-level detail (the OCR line
+/// dumps logged at debug) for a bug report without a custom build.
+fn log_level() -> simplelog::LevelFilter {
+    use simplelog::LevelFilter;
+    match std::env::var("SC_ORE_LOG")
+        .ok()
+        .as_deref()
+        .map(|s| s.trim().to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("trace") => LevelFilter::Trace,
+        Some("debug") => LevelFilter::Debug,
+        Some("warn") => LevelFilter::Warn,
+        Some("error") => LevelFilter::Error,
+        Some("off") => LevelFilter::Off,
+        _ => LevelFilter::Info,
+    }
+}
+
+/// Roll `scanner.log` to `scanner.log.1` (replacing any previous roll) once it
+/// exceeds `MAX_LOG_BYTES`, so an append-only log can't grow without bound over
+/// months of sessions. Best-effort: any failure leaves the current log in place.
+fn rotate_log_if_large(path: &std::path::Path) {
+    rotate_if_over(path, MAX_LOG_BYTES);
+}
+
+/// Rotation core, parameterised on the size cap so it's testable without writing
+/// a multi-MB file.
+fn rotate_if_over(path: &std::path::Path, max_bytes: u64) {
+    if let Ok(meta) = std::fs::metadata(path) {
+        if meta.len() > max_bytes {
+            let _ = std::fs::rename(path, path.with_extension("log.1"));
+        }
+    }
+}
+
+/// Route panics to the log file. Release builds have no console
+/// (`windows_subsystem = "windows"`), so without this a panic on the main thread
+/// — or one caught by the scan loop's guard — leaves nothing in scanner.log. The
+/// message goes through the same `RedactingWriter`, so any path in it is scrubbed.
+/// Chains to the previous hook (stderr in debug builds).
+fn install_panic_hook() {
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}", l.file(), l.line()))
+            .unwrap_or_else(|| "unknown location".to_string());
+        let msg = info
+            .payload()
+            .downcast_ref::<&str>()
+            .copied()
+            .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
+            .unwrap_or("<non-string panic payload>");
+        log::error!("PANIC at {location}: {msg}");
+        previous(info);
+    }));
+}
+
 /// Log to `<app config>/logs/scanner.log`. Falls back silently to no file
 /// logging if the path can't be created. Log lines are scrubbed of the user's
 /// home path / username (see `RedactingWriter`).
@@ -270,13 +335,14 @@ fn init_logging() {
     });
 
     if let Some(path) = log_path {
+        rotate_log_if_large(&path);
         if let Ok(file) = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&path)
         {
             let _ = simplelog::WriteLogger::init(
-                simplelog::LevelFilter::Info,
+                log_level(),
                 simplelog::Config::default(),
                 RedactingWriter::new(file),
             );
@@ -286,6 +352,7 @@ fn init_logging() {
 
 fn main() {
     init_logging();
+    install_panic_hook();
     log::info!("SC Ore Scanner v{} starting.", env!("CARGO_PKG_VERSION"));
 
     tauri::Builder::default()
@@ -359,8 +426,30 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::RedactingWriter;
+    use super::{rotate_if_over, RedactingWriter};
     use std::io::Write;
+
+    #[test]
+    fn rotates_only_when_over_the_cap() {
+        let dir = std::env::temp_dir().join(format!("sc-ore-rot-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let log = dir.join("scanner.log");
+        let rolled = log.with_extension("log.1");
+        let _ = std::fs::remove_file(&rolled);
+        std::fs::write(&log, b"0123456789").unwrap(); // 10 bytes
+
+        // Under the cap: left in place, no roll.
+        rotate_if_over(&log, 100);
+        assert!(log.exists(), "small log is not rotated");
+        assert!(!rolled.exists());
+
+        // Over the cap: moved aside to scanner.log.1.
+        rotate_if_over(&log, 5);
+        assert!(!log.exists(), "oversized log is moved aside");
+        assert!(rolled.exists(), "rolled to scanner.log.1");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn redacts_home_path_and_username() {

@@ -33,6 +33,7 @@ export interface ScanResult {
   ores: Record<string, OreData>;
   scanner_active: boolean;
   configured?: boolean;  // false until a scan region is calibrated
+  error?: string | null; // set when the scan loop can't run (e.g. OCR failed to load)
 }
 
 // How many consecutive empty scans to keep the last result visible before
@@ -46,6 +47,8 @@ interface OreStore {
   scannerActive: boolean;
   configured: boolean;
   connected: boolean;
+  // A fatal scan-loop error (e.g. OCR engine load failure); null when healthy.
+  error: string | null;
   // Internal: consecutive empty scans since the last detection (drives linger).
   emptyScans: number;
 
@@ -58,6 +61,7 @@ export const useOreStore = create<OreStore>((set) => ({
   scannerActive: false,
   configured: false,
   connected: false,
+  error: null,
   emptyScans: 0,
 
   setConnected: (connected) => set({ connected }),
@@ -67,6 +71,7 @@ export const useOreStore = create<OreStore>((set) => ({
       const flags = {
         scannerActive: result.scanner_active,
         configured: result.configured ?? true,
+        error: result.error ?? null,
       };
       const hasOres = Object.keys(result.ores).length > 0;
 

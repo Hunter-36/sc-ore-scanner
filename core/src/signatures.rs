@@ -60,7 +60,24 @@ pub fn parse_signatures(json: &str) -> serde_json::Result<Vec<OreSignature>> {
 }
 
 /// Load the embedded mineables dataset. Panics only if the embedded JSON is invalid,
-/// which a unit test guards against.
+/// which the `embedded_dataset_parses` unit test guards against at build time.
 pub fn load_signatures() -> Vec<OreSignature> {
     parse_signatures(MINEABLES_JSON).expect("embedded mineables.json must parse")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::load_signatures;
+
+    /// The embedded dataset is the offline floor — if it fails to parse the app
+    /// panics at startup, so guard the `expect` in `load_signatures` with a test
+    /// that fails the build instead of shipping a broken binary.
+    #[test]
+    fn embedded_dataset_parses_and_is_non_empty() {
+        let sigs = load_signatures();
+        assert!(
+            !sigs.is_empty(),
+            "embedded mineables.json must contain ores"
+        );
+    }
 }

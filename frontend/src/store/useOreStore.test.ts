@@ -6,6 +6,7 @@ const initialState = {
   scannerActive: false,
   configured: false,
   connected: false,
+  error: null,
   emptyScans: 0,
 };
 
@@ -86,6 +87,21 @@ describe('useOreStore', () => {
     store.updateFromScan(sampleScan);
     store.updateFromScan({ ores: {}, scanner_active: false, configured: false });
     expect(useOreStore.getState().ores).toEqual({});
+  });
+
+  it('surfaces a fatal scan-loop error and clears it when healthy again', () => {
+    const store = useOreStore.getState();
+    store.updateFromScan({
+      ores: {},
+      scanner_active: false,
+      configured: false,
+      error: 'OCR engine failed to load',
+    });
+    expect(useOreStore.getState().error).toBe('OCR engine failed to load');
+
+    // A normal scan with no error field resets it (error ?? null).
+    store.updateFromScan(sampleScan);
+    expect(useOreStore.getState().error).toBeNull();
   });
 
   it('preserves candidates + group_label for a degenerate (ambiguous) reading', () => {

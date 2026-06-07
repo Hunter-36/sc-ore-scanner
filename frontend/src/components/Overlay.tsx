@@ -5,7 +5,7 @@ import { OreCard } from './OreCard';
 import { Settings } from './Settings';
 
 export function Overlay() {
-  const { ores, scannerActive, configured, connected } = useOreStore();
+  const { ores, scannerActive, configured, connected, error } = useOreStore();
   useScanEvents();
   const [showSettings, setShowSettings] = useState(false);
 
@@ -120,7 +120,16 @@ export function Overlay() {
       ) : (
       /* Ore List */
       <div className="ore-list">
-        {!connected && (
+        {/* A fatal scan-loop error wins over every other state — otherwise the
+            user would sit on "Starting scanner…" with no idea why. */}
+        {error && (
+          <div className="message" role="alert">
+            <p>Scanner unavailable</p>
+            <p className="hint">{error}</p>
+          </div>
+        )}
+
+        {!error && !connected && (
           <div className="message">
             <p>Starting scanner…</p>
             <p className="hint">Loading the OCR engine (~15–20s on first launch). If
@@ -128,7 +137,7 @@ export function Overlay() {
           </div>
         )}
 
-        {connected && !configured && (
+        {!error && connected && !configured && (
           <div className="message">
             <p>Set your scan region</p>
             <p className="hint">Click <b>Set region</b> (top-right), then drag a box
@@ -136,14 +145,14 @@ export function Overlay() {
           </div>
         )}
 
-        {connected && configured && !hasOres && (
+        {!error && connected && configured && !hasOres && (
           <div className="message">
             <p>{scannerActive ? 'No ores detected' : 'Waiting for scanner...'}</p>
             <p className="hint">Point your scanner at ore deposits in-game.</p>
           </div>
         )}
 
-        {connected && hasOres && (
+        {!error && connected && hasOres && (
           <div className="ores-grid">
             {sortedOres.map(([id, ore]) => (
               <OreCard key={id} ore={ore} />
