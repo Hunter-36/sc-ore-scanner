@@ -4,6 +4,7 @@
 
 pub mod config;
 pub mod debounce;
+pub mod mineables;
 pub mod ocr;
 pub mod pipeline;
 pub mod preprocess;
@@ -12,4 +13,4 @@ pub mod resolver;
 pub mod signatures;
 
 pub use resolver::{OreMatch, Resolver, SignatureConfig};
-pub use signatures::OreSignature;
+pub use signatures::{Location, OreSignature};

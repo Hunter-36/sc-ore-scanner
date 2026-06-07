@@ -1,0 +1,56 @@
+name: Feeds
+
+# Builds the two data feeds the app fetches at runtime and publishes them to GitHub Pages:
+#   - prices.json    — UEX ore prices; refreshed HOURLY (drifts with the player market).
+#   - mineables.json — Wiki API ore signatures + per-location spawn probability; refreshed
+#     DAILY (changes per game patch, and the wiki API is a community resource — be polite).
+#
+# One workflow + one deploy on purpose: GitHub Pages serves a single artifact as the whole
+# site, so every deploy must contain BOTH files (two separate workflows would clobber each
+# other's file). On hourly runs we carry the existing mineables.json over unchanged; the
+# daily run (and manual dispatch) rebuilds it from the Wiki API.
+#
+# One-time setup: enable Pages with "Source: GitHub Actions" (Settings -> Pages), then run
+# this workflow once manually (Run workflow) to publish the first mineables.json.
+on:
+  schedule:
+    - cron: "0 * * * *" # hourly — prices
+    - cron: "30 6 * * *" # daily 06:30 UTC — also rebuild mineables
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+
+# Don't run overlapping deploys.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      PAGES_BASE: https://hunter-36.github.io/sc-ore-scanner
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build prices.json from UEX (every run)
+        run: python scripts/fetch_prices.py
+      - name: Carry over the published mineables.json (rebuilt daily/manually below)
+        # Preserve the current dataset on hourly runs so the deploy doesn't drop it.
+        # Self-bootstraps (builds it) if Pages has none yet.
+        run: curl -fsSL "$PAGES_BASE/mineables.json" -o public/mineables.json || python scripts/fetch_mineables.py
+      - name: Rebuild mineables.json from the Wiki API (daily + manual)
+        if: github.event.schedule == '30 6 * * *' || github.event_name == 'workflow_dispatch'
+        run: python scripts/fetch_mineables.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deploy
+        uses: actions/deploy-pages@v4

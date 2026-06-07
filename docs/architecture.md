@@ -32,14 +32,16 @@ pushed to the React overlay via a Tauri event. No separate backend, no WebSocket
 | `pipeline.rs` | `recognize_rs_numbers` / `recognize_rs_numbers_from_processed` (OCR → split each line into number tokens via the internal `extract_numbers` helper → keep 3–6 digit numbers in RS range), `resolve_and_aggregate`, and the one-shot `detect_ores` (preprocess + recognize + resolve) used by the `validate` example and the e2e test. |
 | `debounce.rs` | `Debouncer` — confirm a number only after it appears in N consecutive frames. |
 | `resolver.rs` | `Resolver` — RS number → ore matches via division (`detected = base_rs × quantity`), with fuzzy tolerance and OCR-error correction. |
-| `signatures.rs` | Loads the embedded `core/data/signatures.json`. |
+| `signatures.rs` | `OreSignature` (+ per-body `Location`); loads the embedded `core/data/mineables.json` — generated from the curated `signatures.json` + Wiki API by `scripts/fetch_mineables.py`. |
+| `mineables.rs` | `mineables::load` — sources the dataset at startup: live Pages feed → on-disk cache → embedded copy (mirrors `prices.rs`). |
 | `prices.rs` | `PriceCache` — fetches the UEX price feed (hourly). |
 
 ## The Tauri shell (`frontend/src-tauri/src/`)
 
 - `scan.rs` — the background scan loop: capture → preprocess →
   `recognize_rs_numbers_from_processed` → debounce → `resolve_and_aggregate` →
-  `emit("scan-result")`. Also fetches prices.
+  `emit("scan-result")`. At startup it loads the mineables dataset (feed → cache →
+  embedded) to build the resolver, and fetches prices.
 - `main.rs` — windows, first-run overlay placement, the calibration command
   (`open_calibration`, **async** — see gotchas), `save_scan_region`, `get_config`,
   `set_config`, `quit`, logging.

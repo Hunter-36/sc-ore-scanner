@@ -145,7 +145,7 @@ sc-ore-scanner/
 │   └── src-tauri/src/        # Rust shell: scan loop, windows, calibration, quit
 │
 ├── scripts/fetch_prices.py   # CI job: publish the UEX price feed to Pages
-├── .github/workflows/        # CI, E2E, Prices, Release
+├── .github/workflows/        # CI, E2E, Feeds, Release
 └── docs/                     # architecture, testing, CI/CD, OCR pipeline
 ```
 
@@ -190,7 +190,7 @@ GitHub Actions (see [`docs/ci-cd.md`](docs/ci-cd.md)):
 |---|---|---|
 | **CI** (`ci.yml`) | push / PR | `cargo fmt`/`clippy`/`test` (core, incl. OCR e2e), frontend typecheck + vitest, Tauri `cargo check`, version-consistency, advisory dependency `audit` |
 | **E2E** (`e2e.yml`) | push / PR | Playwright overlay display tests |
-| **Prices** (`prices.yml`) | hourly cron | refresh the UEX price feed published to GitHub Pages |
+| **Feeds** (`feeds.yml`) | hourly + daily cron | publish the UEX price feed (hourly) and the Wiki-API mineables dataset (daily) to GitHub Pages |
 | **Release** (`release.yml`) | merge to `master` with a new version | builds the app + NSIS/MSI installers and publishes a GitHub Release |
 
 Releasing: bump the version in `frontend/package.json`, `frontend/src-tauri/tauri.conf.json`,

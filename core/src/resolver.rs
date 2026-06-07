@@ -51,8 +51,14 @@ impl Default for Resolver {
 
 impl Resolver {
     pub fn new() -> Self {
+        Self::from_signatures(load_signatures())
+    }
+
+    /// Build a resolver from an explicit signature set (e.g. the runtime-fetched
+    /// mineables dataset) instead of the embedded copy.
+    pub fn from_signatures(signatures: Vec<OreSignature>) -> Self {
         Self {
-            signatures: load_signatures(),
+            signatures,
             config: SignatureConfig::default(),
         }
     }
