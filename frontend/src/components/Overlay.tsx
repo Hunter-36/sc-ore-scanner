@@ -46,7 +46,9 @@ export function Overlay() {
   return (
     <div className="overlay">
       {/* Header. Only the title/status area is a drag region — the buttons must
-          NOT be inside it, or Tauri's drag handler swallows their clicks. */}
+          NOT be inside it, or Tauri's drag handler swallows their clicks. Its
+          children are pointer-events:none (App.css) so a press on the text
+          still lands on the element carrying data-tauri-drag-region (#108). */}
       <div className="overlay-header">
         <div className="header-drag" data-tauri-drag-region>
           <div className="title">SC ORE SCANNER</div>

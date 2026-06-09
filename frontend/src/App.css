@@ -54,6 +54,14 @@ body {
   cursor: move;
 }
 
+/* Tauri starts a window drag only when the mousedown target itself carries
+   data-tauri-drag-region. The title/status children are display-only, so let
+   presses fall through to .header-drag — otherwise the window is draggable
+   only on the empty gaps between the text (#108). */
+.header-drag > * {
+  pointer-events: none;
+}
+
 .title {
   font-size: 14px;
   font-weight: 700;

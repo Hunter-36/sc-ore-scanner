@@ -1,6 +1,6 @@
 [package]
 name = "sc-ore-scanner"
-version = "2.4.0"
+version = "2.4.1"
 description = "Star Citizen mining overlay - single-binary all-Rust app"
 authors = ["Hunter-36"]
 license = "MIT"
