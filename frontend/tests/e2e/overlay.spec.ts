@@ -82,6 +82,34 @@ test('header exposes the calibrate and close buttons', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Close overlay' })).toBeVisible();
 });
 
+test('the whole header text area is a window drag region (#108)', async ({ page }) => {
+  // Tauri starts a window drag only when the mousedown target itself carries
+  // data-tauri-drag-region. elementFromPoint mirrors that hit-test: a press on
+  // the title/status text must fall through to .header-drag, not be swallowed
+  // by a display-only child.
+  for (const selector of ['.title', '.status-text', '.status-dot']) {
+    const hitsDragRegion = await page.locator(selector).evaluate((el) => {
+      const { left, top, width, height } = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(left + width / 2, top + height / 2);
+      return hit !== null && hit.hasAttribute('data-tauri-drag-region');
+    });
+    expect(hitsDragRegion, `a press on ${selector} should land on the drag region`).toBe(true);
+  }
+});
+
+test('header buttons are not part of the drag region (#108)', async ({ page }) => {
+  // The action buttons must keep receiving their own presses — inside a drag
+  // region the window drag would swallow the click.
+  for (const name of ['Settings', 'Set scan region', 'Close overlay']) {
+    const pressHitsButton = await page.getByRole('button', { name }).evaluate((el) => {
+      const { left, top, width, height } = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(left + width / 2, top + height / 2);
+      return el.contains(hit) && hit !== null && !hit.closest('[data-tauri-drag-region]');
+    });
+    expect(pressHitsButton, `a press on "${name}" should hit the button itself`).toBe(true);
+  }
+});
+
 test('prompts to set a scan region when none is configured', async ({ page }) => {
   await emitScan(page, { ores: {}, scanner_active: false, configured: false });
   await expect(page.locator('.message')).toContainText('Set your scan region');
