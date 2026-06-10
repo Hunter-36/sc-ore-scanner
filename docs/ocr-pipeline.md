@@ -27,7 +27,12 @@ Detection/recognition is done by [`ocrs`](https://github.com/robertknight/ocrs)
 ## The pipeline (`preprocess_for_ocr` → `recognize_rs_numbers` → debounce → resolve)
 
 1. **Crop** to the calibrated scan region.
-2. **Upscale** ×`upscale` (default 4, Lanczos) so the small text is large enough.
+2. **Upscale** (Lanczos) so the small text is large enough. The factor is **adaptive**
+   (`preprocess::auto_scale`): it scales the cropped region toward a target height
+   (~192 px, the size `ocrs` reads cleanly), so a small region (ultrawide + high FOV
+   shrink the RS readout in pixels) is upscaled more than a large one. `upscale`
+   (default 4) is the **floor**; the factor is capped at ×8. For the validated 16:9
+   captures this still computes to ×4 — behaviour there is unchanged.
 3. *(Optional)* **grayscale + CLAHE** contrast — see below; off by default.
 4. **ocrs** OCRs the crop, returning text lines.
 5. **Per-number extraction** (the internal `extract_numbers` helper): split each line into number
@@ -67,16 +72,29 @@ strokes in v1; don't reintroduce it.
 
 | Field | Default | Purpose |
 |---|---|---|
-| `upscale` | 4 | Upscale multiplier before OCR |
+| `upscale` | 4 | **Minimum** upscale multiplier before OCR (a floor — `auto_scale` raises it for small regions, capped at ×8) |
 | `scan_interval_secs` | 0.75 | Seconds between scans |
 | `min_consecutive_frames` | 3 | Debounce: frames required to confirm a number |
 | `clahe_clip_limit` | 0.0 | CLAHE contrast limit (0 = off) |
 | `clahe_grid` | [8, 8] | CLAHE tile grid |
 
-## Resolution / region caveat
+## Resolution / region caveat (and the ultrawide fix)
 
-The pipeline crops to the calibrated region and applies a fixed upscale, so it adapts
-reasonably to different region sizes, but it's been **validated against one capture
-resolution** (the fixtures in `core/tests/fixtures/`). When adapting to a new resolution
-or HUD scale, add captures there and a `tests/e2e.rs` assertion, and confirm the test
+The RS readout's size **in screen pixels** depends on resolution, HUD/render scale, and
+FOV. Ultrawide (21:9 / 32:9) at default-or-higher FOV renders it smallest, and a *fixed*
+upscale then fed `ocrs` too few pixels for a stable read — so users had to lower their
+in-game FOV to enlarge the text (issue #110). The **adaptive upscale** (step 2) fixes
+this: it scales the cropped region toward a readable target height instead of by a fixed
+×4, recovering small regions while staying byte-identical on the validated 16:9 captures.
+
+There's a floor: below ~24 px of region height (`preprocess::MIN_READABLE_REGION_HEIGHT`,
+= target ÷ max factor = 192 ÷ 8) the text is too few real pixels to recover at any
+upscale — Lanczos can't invent detail that was never captured. The calibration overlay
+**warns** when the drawn region is below this, and `save_scan_region` logs it; the answer
+there is a higher in-game HUD/render scale, not more upscaling.
+
+Detection is still **validated against the captures in `core/tests/fixtures/`** (one base
+resolution, plus a synthetic downscale that reproduces the ultrawide small-text case in
+`tests/e2e.rs`). Real ultrawide captures are still valuable — add a PNG to `fixtures/` and
+a `tests/e2e.rs` assertion (see CONTRIBUTING "Adding test captures"), and confirm the test
 stays green.

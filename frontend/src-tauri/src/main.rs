@@ -90,6 +90,16 @@ fn save_scan_region(app: AppHandle, x: u32, y: u32, w: u32, h: u32) -> Result<()
     cfg.scan_region = Some([x, y, w, h]);
     cfg.save(&path).map_err(|e| e.to_string())?;
     log::info!("calibrated scan region: [{x}, {y}, {w}, {h}]");
+    // The frontend warns the user about this; log it too so a flaky-detection
+    // report is easy to diagnose (the RS text is below the readable floor even at
+    // max upscale — issue #110).
+    if h < scanner_core::preprocess::MIN_READABLE_REGION_HEIGHT {
+        log::warn!(
+            "scan region is only {h}px tall (< {}px) — RS text may be too small for reliable OCR; \
+             suggest a tighter box or higher in-game HUD/render scale",
+            scanner_core::preprocess::MIN_READABLE_REGION_HEIGHT
+        );
+    }
     Ok(())
 }
 

@@ -67,3 +67,29 @@ test('pressing on the panel does not start a drag', async ({ page }) => {
   await page.mouse.up();
   await expect(page.locator('.calibrate-box')).toHaveCount(0);
 });
+
+test('warns (does not save) when the released box is too short to read', async ({ page }) => {
+  // dpr=1 headless, so a valid drag (≥ 20px) that is still < 24px capture-px tall
+  // (issue #110 readability floor) triggers the warning instead of saving.
+  await page.mouse.move(300, 300);
+  await page.mouse.down();
+  await page.mouse.move(380, 322, { steps: 6 }); // 80 × 22
+  await page.mouse.up();
+  const warning = page.locator('.calibrate-warning');
+  await expect(warning).toBeVisible();
+  await expect(warning).toContainText('RS');
+  await expect(page.getByRole('button', { name: 'Save anyway' })).toBeVisible();
+  // The box stays on screen (not saved/closed) so the user can redraw.
+  await expect(page.locator('.calibrate-box')).toBeVisible();
+});
+
+test('a normal box does not trigger the readability warning', async ({ page }) => {
+  await page.mouse.move(BOX.x1, BOX.y1);
+  await page.mouse.down();
+  await page.mouse.move(BOX.x2, BOX.y2, { steps: 8 }); // 320 × 220
+  await page.mouse.up();
+  // After release a normal box takes the save path (a no-op in the browser) and
+  // never sets the warning; assert post-release so this actually exercises it.
+  await expect(page.locator('.calibrate-box')).toBeVisible();
+  await expect(page.locator('.calibrate-warning')).toHaveCount(0);
+});

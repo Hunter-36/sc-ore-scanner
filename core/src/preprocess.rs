@@ -7,6 +7,48 @@
 
 use image::{imageops::FilterType, GrayImage, Luma, RgbImage};
 
+/// The upscaled scan-region height (px) `ocrs` reads reliably. The well-tuned 16:9
+/// fixtures crop to a ~48px-tall region and upscale ×4 → ~192px; that's the text
+/// size the engine reads cleanly, so we treat it as the target for *any* capture.
+const TARGET_REGION_HEIGHT: u32 = 192;
+
+/// Hard cap on the auto-upscale factor. Beyond this the bigger canvas stops helping
+/// — Lanczos can't invent detail that was never captured, and over-upscaling tiny
+/// text *regressed* reads in testing (issue #110 spike). It also bounds OCR cost on
+/// a mis-calibrated, near-empty region.
+const MAX_AUTO_SCALE: u32 = 8;
+
+/// The smallest scan-region height (capture px) the adaptive upscale can still lift
+/// to [`TARGET_REGION_HEIGHT`] within [`MAX_AUTO_SCALE`]. Below this the RS text is
+/// too few pixels for a reliable read even at max upscale — the calibration UI warns
+/// when the drawn region is smaller than this.
+pub const MIN_READABLE_REGION_HEIGHT: u32 = TARGET_REGION_HEIGHT / MAX_AUTO_SCALE;
+
+/// Pick the upscale factor for a cropped region `region_height` px tall, given the
+/// configured `base` factor.
+///
+/// Returns at least `base` (never downscales below the user's setting — so the
+/// validated 16:9 captures keep their ×4 and behave exactly as before), and *more*
+/// when the region is small enough that `base×` would leave the HUD text below the
+/// size `ocrs` reads reliably, capped at [`MAX_AUTO_SCALE`].
+///
+/// This is the issue #110 fix: ultrawide + high FOV shrinks the RS readout in screen
+/// pixels, so a fixed ×4 upscales too few pixels for a stable read. Targeting a text
+/// height instead of a fixed multiplier recovers it, while staying a no-op for
+/// regions already large enough at `base`.
+pub fn auto_scale(region_height: u32, base: u32) -> u32 {
+    let base = base.max(1);
+    if region_height == 0 {
+        return base;
+    }
+    // Smallest factor that reaches the target height, but never below `base` and
+    // never above the cap. (`max(base)` on the upper bound keeps `clamp` valid even
+    // if a future `base` exceeds the cap.)
+    TARGET_REGION_HEIGHT
+        .div_ceil(region_height)
+        .clamp(base, MAX_AUTO_SCALE.max(base))
+}
+
 /// Crop to a `[x, y, width, height]` scan region (None = whole image), then
 /// upscale by `scale` (Lanczos) so the small HUD text is large enough for OCR.
 pub fn crop_and_upscale(img: &RgbImage, region: Option<[u32; 4]>, scale: u32) -> RgbImage {
@@ -46,8 +88,16 @@ pub fn crop_rgba_to_rgb(raw: &[u8], full_w: u32, full_h: u32, region: [u32; 4]) 
     rgb
 }
 
-/// Full OCR preprocessing: crop -> upscale -> grayscale -> CLAHE -> back to RGB
-/// (ocrs wants RGB bytes). Mirrors the Python `preprocess_image`.
+/// Full OCR preprocessing: crop -> (adaptive) upscale -> grayscale -> CLAHE -> back
+/// to RGB (ocrs wants RGB bytes). Mirrors the Python `preprocess_image`, plus the
+/// issue #110 adaptive upscale.
+///
+/// `scale` is the *floor* (the configured `upscale`): the actual factor is chosen by
+/// [`auto_scale`] from the cropped region's height, so small regions (ultrawide +
+/// high FOV) get upscaled more to keep the text readable, while regions already large
+/// enough stay at `scale`. The region height is the crop's height (`region[3]`, or
+/// the whole image when `region` is `None` — the scan loop passes an already-cropped
+/// frame that way).
 pub fn preprocess_for_ocr(
     img: &RgbImage,
     region: Option<[u32; 4]>,
@@ -55,7 +105,8 @@ pub fn preprocess_for_ocr(
     clahe_clip_limit: f64,
     clahe_grid: [u32; 2],
 ) -> RgbImage {
-    let upscaled = crop_and_upscale(img, region, scale);
+    let region_height = region.map(|[_, _, _, h]| h).unwrap_or_else(|| img.height());
+    let upscaled = crop_and_upscale(img, region, auto_scale(region_height, scale));
 
     // CLAHE is opt-in (clip > 0). The ocrs engine reads the raw upscaled HUD text
     // well; CLAHE at v1's clip=2.0 actually regressed ocrs detection, so it's off
@@ -176,8 +227,73 @@ pub fn clahe(gray: &GrayImage, tiles_x: u32, tiles_y: u32, clip_limit: f32) -> G
 
 #[cfg(test)]
 mod tests {
-    use super::{clahe, crop_and_upscale, crop_rgba_to_rgb};
+    use super::{
+        auto_scale, clahe, crop_and_upscale, crop_rgba_to_rgb, MAX_AUTO_SCALE,
+        MIN_READABLE_REGION_HEIGHT, TARGET_REGION_HEIGHT,
+    };
     use image::{GrayImage, Luma, Rgb, RgbImage};
+
+    #[test]
+    fn auto_scale_keeps_existing_fixtures_at_base() {
+        // The validated 16:9 fixtures crop to a 48px-tall region (and the ambiguous
+        // ones read the full ~240–255px frame). Both must compute to exactly the
+        // base factor, so detection on existing captures is byte-identical.
+        assert_eq!(auto_scale(48, 4), 4, "48px region -> ×4 (unchanged)");
+        assert_eq!(auto_scale(242, 4), 4, "tall full-frame -> ×4 (unchanged)");
+        assert_eq!(auto_scale(255, 4), 4);
+        // Anything at least the base's worth of target height is a no-op.
+        assert_eq!(auto_scale(TARGET_REGION_HEIGHT, 4), 4);
+    }
+
+    #[test]
+    fn auto_scale_lifts_small_regions_to_target() {
+        // Ultrawide + high FOV shrinks the region; the factor grows to reach ~192px.
+        assert_eq!(auto_scale(24, 4), 8, "192/24 = 8");
+        assert_eq!(auto_scale(28, 4), 7, "ceil(192/28) = 7");
+        assert_eq!(auto_scale(32, 4), 6, "192/32 = 6");
+        // Every lift stays in the band that read in testing.
+        for h in 24..=48 {
+            let s = auto_scale(h, 4);
+            assert!((4..=MAX_AUTO_SCALE).contains(&s), "h={h} -> ×{s}");
+            assert!(h * s >= TARGET_REGION_HEIGHT, "h={h} reaches the target");
+        }
+    }
+
+    #[test]
+    fn auto_scale_never_below_base_and_capped() {
+        // Never downscale below the user's configured factor...
+        assert_eq!(auto_scale(300, 6), 6, "huge region floored to base");
+        assert_eq!(auto_scale(48, 6), 6);
+        // ...and never exceed the cap, even for a tiny (likely mis-calibrated) region.
+        assert_eq!(
+            auto_scale(16, 4),
+            MAX_AUTO_SCALE,
+            "192/16 = 12, capped at 8"
+        );
+        assert_eq!(auto_scale(1, 4), MAX_AUTO_SCALE);
+        // Degenerate height can't divide; fall back to base.
+        assert_eq!(auto_scale(0, 4), 4);
+    }
+
+    #[test]
+    fn min_readable_region_height_matches_the_cap() {
+        // The calibration warning threshold is exactly the height the cap can still
+        // lift to the target; below it, max upscale falls short.
+        assert_eq!(
+            MIN_READABLE_REGION_HEIGHT,
+            TARGET_REGION_HEIGHT / MAX_AUTO_SCALE
+        );
+        assert_eq!(
+            auto_scale(MIN_READABLE_REGION_HEIGHT, 4) * MIN_READABLE_REGION_HEIGHT,
+            TARGET_REGION_HEIGHT,
+            "the floor still just reaches the target"
+        );
+        assert!(
+            auto_scale(MIN_READABLE_REGION_HEIGHT - 1, 4) * (MIN_READABLE_REGION_HEIGHT - 1)
+                < TARGET_REGION_HEIGHT,
+            "one px smaller falls short even at max upscale"
+        );
+    }
 
     #[test]
     fn crops_region_from_rgba_buffer() {

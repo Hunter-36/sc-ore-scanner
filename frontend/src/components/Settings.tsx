@@ -193,7 +193,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
 
       <label className="settings-field">
         <span>
-          Upscale <b>{cfg.upscale}×</b>
+          Min upscale <b>{cfg.upscale}×</b>
         </span>
         <input
           type="range"
@@ -203,7 +203,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
           value={cfg.upscale}
           onChange={(e) => update({ upscale: parseInt(e.target.value, 10) })}
         />
-        <span className="settings-hint">higher = better OCR, more CPU</span>
+        <span className="settings-hint">floor — small/ultrawide regions auto-scale higher</span>
       </label>
 
       <label className="settings-field">

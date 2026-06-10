@@ -12,7 +12,10 @@ pub struct Config {
     pub scan_region: Option<[u32; 4]>,
     #[serde(default = "default_interval")]
     pub scan_interval_secs: f64,
-    /// Upscale factor applied to the cropped region before OCR.
+    /// Minimum upscale factor applied to the cropped region before OCR. It's a
+    /// floor, not a fixed multiplier: `preprocess::auto_scale` raises it for small
+    /// regions (ultrawide + high FOV shrink the RS text in pixels) so the text
+    /// reaches a readable size, while regions already large enough stay at this value.
     #[serde(default = "default_scale")]
     pub upscale: u32,
     /// Number must be detected this many consecutive frames before it's reported.

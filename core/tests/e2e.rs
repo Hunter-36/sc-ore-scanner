@@ -8,7 +8,13 @@
 
 use std::path::Path;
 
-use scanner_core::{ocr::Ocr, pipeline::detect_ores, resolver::Resolver};
+use image::imageops::FilterType;
+use scanner_core::{
+    ocr::Ocr,
+    pipeline::{detect_ores, recognize_rs_numbers_from_processed, resolve_and_aggregate},
+    preprocess::{auto_scale, crop_and_upscale},
+    resolver::Resolver,
+};
 
 // The scan region within the fixtures (the in-game calibration equivalent).
 const REGION: Option<[u32; 4]> = Some([193, 122, 109, 48]);
@@ -119,5 +125,64 @@ fn ocr_accuracy_on_real_captures() {
             ("Savrilium".to_string(), 6),
         ]),
         "19,200 should resolve to the Savrilium-or-Aslarite ambiguous set",
+    );
+}
+
+/// Issue #110: ultrawide + high FOV renders the RS readout small in *screen pixels*,
+/// so a fixed ×4 upscale feeds `ocrs` too few pixels for a reliable read. We have no
+/// real ultrawide captures yet (a community ask — see CONTRIBUTING "Adding test
+/// captures"), so this reproduces the failure faithfully by downscaling a known-good
+/// 16:9 capture: halving the linear size shrinks the RS text in pixels exactly the way
+/// a higher-resolution / higher-FOV HUD does. The adaptive upscale must recover the
+/// read that a fixed ×4 loses — and would have FAILED before the fix, since the
+/// pipeline upscaled by a fixed factor.
+#[test]
+fn adaptive_upscale_recovers_small_ultrawide_text() {
+    let ocr = Ocr::new().expect("OCR engine init");
+    let resolver = Resolver::new();
+
+    // Beryl×3 reads cleanly at native size (region [193,122,109,48], ×4). Halve the
+    // whole frame to simulate a HUD that renders smaller in pixels.
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join("sc_mining_scan_rs_10620_some_particles.png");
+    let full = image::open(&path)
+        .unwrap_or_else(|e| panic!("open {}: {e}", path.display()))
+        .into_rgb8();
+    let (fw, fh) = full.dimensions();
+    let small = image::imageops::resize(&full, fw / 2, fh / 2, FilterType::Lanczos3);
+    // The calibrated region, scaled to the downscaled frame: ~24px tall — small
+    // enough that a fixed ×4 (→96px) leaves the text sub-readable.
+    let region = [96u32, 61, 54, 24];
+    let beryl3 = Some(("Beryl".to_string(), 3));
+
+    let best = |agg: std::collections::HashMap<String, scanner_core::pipeline::Detection>| {
+        agg.into_values()
+            .max_by(|a, b| a.confidence.partial_cmp(&b.confidence).unwrap())
+            .map(|m| (m.ore.name.clone(), m.quantity))
+    };
+
+    // The fix only matters because this region is in the "too small for ×4" regime:
+    // auto_scale must pick a larger factor than the base.
+    assert!(
+        auto_scale(region[3], 4) > 4,
+        "a {}px region should upscale beyond the ×4 base",
+        region[3]
+    );
+
+    // Reproduction of the bug: the old fixed ×4 pipeline loses this signature.
+    let fixed = crop_and_upscale(&small, Some(region), 4);
+    let fixed_numbers = recognize_rs_numbers_from_processed(&fixed, &ocr, &resolver).expect("ocr");
+    assert_ne!(
+        best(resolve_and_aggregate(&fixed_numbers, &resolver, None)),
+        beryl3,
+        "fixed ×4 should fail on the shrunken text — this is the failure #110 reports"
+    );
+
+    // The fix: detect_ores upscales by auto_scale, recovering the read.
+    assert_eq!(
+        best(detect_ores(&small, Some(region), 4, &ocr, &resolver).expect("detect_ores")),
+        beryl3,
+        "adaptive upscale recovers the read a fixed ×4 loses",
     );
 }

@@ -156,7 +156,10 @@ sc-ore-scanner/
 ## How It Works
 
 1. A background thread captures the **primary monitor** every ~0.75s.
-2. The frame is cropped to your calibrated **scan region** and upscaled ×4 (Lanczos).
+2. The frame is cropped to your calibrated **scan region** and upscaled (Lanczos).
+   The factor is **adaptive** — small regions (ultrawide / high FOV shrink the RS text
+   in pixels) get scaled up more so the text stays readable; it's ×4 for the validated
+   16:9 captures.
 3. `ocrs` OCRs the crop; each line is split into number tokens (so the RS value isn't
    merged with the distance marker).
 4. Tokens that are 3–6 digit numbers in the valid RS range are kept.
