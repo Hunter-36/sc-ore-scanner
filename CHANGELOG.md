@@ -7,6 +7,22 @@ All notable changes to SC Ore Scanner. The format is based on
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.4.2] - 2026-06-10
+
+### Fixed
+- **Ultrawide users no longer have to lower their FOV for reliable scans.** The OCR
+  upscale is now **adaptive**: instead of a fixed ×4, the pipeline scales the cropped
+  scan region toward a readable text height (capped at ×8), so the small RS readout that
+  ultrawide (21:9 / 32:9) + high FOV produces is enlarged enough for `ocrs` to read.
+  Detection on the validated 16:9 captures is unchanged (still computes to ×4). The
+  `Upscale` setting is now the **minimum** factor (a floor), not a fixed multiplier. (#110)
+
+### Added
+- **Calibration warns when the drawn region is too small to read.** If the box is below
+  the height detection can recover even at max upscale (~24 px), the overlay flags it and
+  suggests a tighter box or a higher in-game HUD/render scale — instead of silently saving
+  a region that won't detect well. (#110)
+
 ## [2.4.0] - 2026-06-07
 
 ### Added

@@ -27,7 +27,7 @@ pushed to the React overlay via a Tauri event. No separate backend, no WebSocket
 | Module | Responsibility |
 |---|---|
 | `config.rs` | `Config` (scan region, interval, debounce frames, CLAHE) loaded/saved as JSON in the app config dir. |
-| `preprocess.rs` | Crop to the scan region, upscale ×4 (Lanczos), optional grayscale + CLAHE. |
+| `preprocess.rs` | Crop to the scan region, then upscale (Lanczos) to a target text height — **adaptive** (`auto_scale`): small/ultrawide regions get a larger factor than the default ×4 so the RS text stays readable; optional grayscale + CLAHE. |
 | `ocr.rs` | `Ocr` — the `ocrs` engine; detection/recognition `.rten` models embedded at build time (`build.rs`). |
 | `pipeline.rs` | `recognize_rs_numbers` / `recognize_rs_numbers_from_processed` (OCR → split each line into number tokens via the internal `extract_numbers` helper → keep 3–6 digit numbers in RS range), `resolve_and_aggregate`, and the one-shot `detect_ores` (preprocess + recognize + resolve) used by the `validate` example and the e2e test. |
 | `debounce.rs` | `Debouncer` — confirm a number once it appears in ≥N of the last 2N frames (a window, tolerant of OCR jitter), not a strict consecutive run. |

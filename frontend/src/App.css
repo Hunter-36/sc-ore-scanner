@@ -206,6 +206,40 @@ body {
   background: rgba(255, 51, 102, 0.32);
 }
 
+/* Readability warning shown when the drawn region is too short for a reliable
+   read (issue #110). Amber, distinct from the blue panel and red Cancel. */
+.calibrate-warning {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: rgba(255, 176, 32, 0.12);
+  border: 1px solid rgba(255, 176, 32, 0.55);
+  border-radius: 6px;
+  color: #ffd98a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.calibrate-warning p {
+  margin: 0 0 10px;
+}
+
+.calibrate-saveanyway {
+  background: rgba(255, 176, 32, 0.18);
+  border: 1px solid rgba(255, 176, 32, 0.65);
+  color: #ffd98a;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.calibrate-saveanyway:hover {
+  background: rgba(255, 176, 32, 0.32);
+}
+
 /* The selection box: transparent blue fill, bright blue border, dimmed outside. */
 .calibrate-box {
   position: absolute;

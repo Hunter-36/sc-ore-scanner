@@ -73,7 +73,9 @@ cargo fmt --check && cargo clippy -- -D warnings
 
 ## Detection pipeline (faithful to v1)
 
-capture primary monitor → crop to `scan_region` → upscale ×4 (Lanczos) →
+capture primary monitor → crop to `scan_region` → upscale (Lanczos, **adaptive** —
+`preprocess::auto_scale` targets a readable text height, ≥ the configured `upscale`
+floor of ×4, capped ×8; small/ultrawide regions get a bigger factor, issue #110) →
 *(CLAHE contrast, opt-in)* → `ocrs` OCR → extract each number token from each line
 → keep 3–6 digit numbers in `valid_rs_min..max` → **debounce: confirm a number seen in
 ≥`min_consecutive_frames` of the last `2×` frames (default 3 of 6 — a window, not a
