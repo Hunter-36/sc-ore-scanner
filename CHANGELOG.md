@@ -7,6 +7,23 @@ All notable changes to SC Ore Scanner. The format is based on
 also has an auto-generated, per-PR "What's Changed" list; this file is the
 curated, human-readable summary.
 
+## [2.4.3] - 2026-06-27
+
+### Fixed
+- Fixed images to look.. not AI generated.
+- **Installer and app icons are refreshed — no more white box around the logo.** The full
+  app icon set and the NSIS/WiX installer artwork are regenerated from the current brand
+  master (`icon-master.png`). The installer dialogs previously framed the logo with a white
+  rectangle because the art was composited from a non-transparent source.
+- **The overlay's favicon no longer 404s.** `frontend/index.html` referenced a `/favicon.png`
+  that didn't exist; it now points at a real, multi-resolution `favicon.ico`.
+
+### Changed
+- **One source of truth for web icons.** `frontend/public/favicon.ico` is the single favicon
+  used by both the overlay and the published price page. The price feed page (GitHub Pages)
+  no longer inlines its icon as a base64 data URI — it ships `favicon.ico` alongside
+  `prices.json` and references it relatively, so the page is smaller and the icon is cached.
+
 ## [2.4.2] - 2026-06-10
 
 ### Fixed

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/icon-master.png" width="120" alt="SC Ore Scanner icon" />
+  <img src="frontend/public/icon-master.png" width="120" alt="SC Ore Scanner icon" />
 </p>
 
 # SC Ore Scanner
