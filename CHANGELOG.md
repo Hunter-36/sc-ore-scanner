@@ -10,7 +10,7 @@ curated, human-readable summary.
 ## [2.4.3] - 2026-06-27
 
 ### Fixed
-- Fixed images to 
+- Fixed images to look.. not AI generated.
 - **Installer and app icons are refreshed — no more white box around the logo.** The full
   app icon set and the NSIS/WiX installer artwork are regenerated from the current brand
   master (`icon-master.png`). The installer dialogs previously framed the logo with a white
